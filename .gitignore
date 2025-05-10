@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Data files
+# Data files
+data/processed/
+data/external/
