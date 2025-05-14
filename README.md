@@ -57,5 +57,5 @@ This is a learning project done as a deep-dive into a structured data analytics 
 
 ### Jatin Yadav
 
-Computer Science Engineering Student & aspiring data analyst
+Computer Science Engineering Student & aspiring data analyst <br>
 [LinkedIn](https://www.linkedin.com/in/jatinyadav459/) | [GitHub](https://github.com/JatinY459/)
