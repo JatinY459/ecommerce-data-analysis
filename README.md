@@ -28,28 +28,34 @@ The dataset contains anonymized customer orders made at a large e-commerce platf
 │   └── 03_eda.ipynb
 ├── visuals/           # Plots and diagrams (optional)
 └── README.md
+```
 
 ## ✨ Objectives
+
 - Clean and preprocess messy, inconsistent, and duplicated data entries
 - Derive insights on order timelines, product pricing, delivery gaps, and payment behavior
 - Identify outliers, trends, and meaningful relationships through visual exploration
 
 ## 🛠️ Tools & Libraries
+
 - Python (pandas, matplotlib, seaborn, numpy)
 - Jupyter Notebooks
 - Optional: Streamlit for future interactive dashboards
 
 ✅ Current Status
+
 - ✅ Data cleaning completed across all five files
 - ✅ Outliers handled and inconsistencies resolved
 - 🔜 EDA in progress
 - 🔜 Insight summary and storytelling
 
 ## 📌 Notes
+
 This is a learning project done as a deep-dive into a structured data analytics workflow. It focuses on clarity, reasoning, and explainability over flashy visuals or automation.
 
 ## 🙋‍♂️ Author
+
 ##### Jatin Yadav
+
 Computer Science Engineering Student & aspiring data analyst
 LinkedIn[https://www.linkedin.com/in/jatinyadav459/] | GitHub[https://github.com/JatinY459/]
-```
