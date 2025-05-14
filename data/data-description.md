@@ -13,7 +13,6 @@
 ## Order Items Table
 
 - **order_id**: Unique identifier for an order.
-- **order_item_id**: Item number in each order, part of the composite primary key along with `order_id`.
 - **product_id**: Unique identifier for a product.
 - **seller_id**: Unique identifier for the seller.
 - **price**: Selling price of the product.
