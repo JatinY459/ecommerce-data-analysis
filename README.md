@@ -49,7 +49,7 @@ The dataset contains anonymized customer orders made at a large e-commerce platf
 This is a learning project done as a deep-dive into a structured data analytics workflow. It focuses on clarity, reasoning, and explainability over flashy visuals or automation.
 
 ## 🙋‍♂️ Author
-<span style='font-size: 2rem; font-weight: 700'>Jatin Yadav</span>
+##### Jatin Yadav
 Computer Science Engineering Student & aspiring data analyst
 LinkedIn[https://www.linkedin.com/in/jatinyadav459/] | GitHub[https://github.com/JatinY459/]
 ```
