@@ -27,3 +27,7 @@ It uncovers consumer behavior, delivery performance, product pricing, and paymen
 Use the sidebar to navigate through focused insights from different aspects of the platform's operations.
 """)
 
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Orders", orders['order_id'].nunique())
+col2.metric("Avg. Delivery Time (hrs)", f"{(orders['delivery_time_gap'].dt.total_seconds().mean() / 3600):.2f}")
+col3.metric("Successful Delivery Percentage", f"{(orders['order_status'] == 'delivered').mean() * 100:.1f}%")
