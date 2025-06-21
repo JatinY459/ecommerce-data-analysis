@@ -61,7 +61,7 @@ col3.metric("Successful Delivery Percentage", f"{(orders['order_status'] == 'del
 # Dataset Info (optional)
 with st.expander("📂 Dataset Information"):
     st.markdown("""
-    The **Ecommerce Order & Supply Chain Dataset** represents transactional data from an e-commerce platform operating in Brazil, covering **84,402 orders** placed between **2017 and 2018**. It includes detailed information on orders, products, customers, sellers, payments, shipping, and delivery timelines — offering a comprehensive view into the dynamics of Brazil’s online retail and logistics ecosystem. The data enables analysis of fulfillment performance, payment preferences, product trends, and much more.
+    The **Ecommerce Order & Supply Chain Dataset** represents transactional data from an e-commerce platform operating in Brazil, covering **84,399 orders** placed between **2017 and 2018**. It includes detailed information on orders, products, customers, sellers, payments, shipping, and delivery timelines — offering a comprehensive view into the dynamics of Brazil’s online retail and logistics ecosystem. The data enables analysis of fulfillment performance, payment preferences, product trends, and much more.
     
     The data is divided into several files, each focusing on a different aspect of the e-commerce workflow:
     
