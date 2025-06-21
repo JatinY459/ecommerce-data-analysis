@@ -11,7 +11,7 @@ import pandas as pd
 from scripts.data_cleaning import import_data
 
 
-st.set_page_config(page_title="E-commerce EDA", page_icon="📑")
+st.set_page_config(page_title="E-commerce EDA", page_icon="📑", initial_sidebar_state="collapsed")
 
 
 # styles
