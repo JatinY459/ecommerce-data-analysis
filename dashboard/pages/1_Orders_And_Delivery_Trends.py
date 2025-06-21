@@ -18,6 +18,7 @@ This page explores key trends in order volumes, statuses, and delivery timelines
 Understand how the platform performs across order fulfillment stages.  
 """)
 
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
 # Create bar plot
@@ -49,3 +50,21 @@ col2.plotly_chart(
     ).update_traces(textposition='outside').update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 )
 
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Order Volume Trends</h2>""", unsafe_allow_html=True)
+
+monthly_counts = orders.groupby(orders['order_purchase_timestamp'].dt.to_period('M')).size().reset_index()
+monthly_counts.columns = ['month', 'order_count']
+monthly_counts['month'] = monthly_counts['month'].dt.strftime('%m-%Y')
+fig = px.line(
+    monthly_counts,
+    x='month',
+    y='order_count',
+    title='Monthly Order Volume Trends',
+    labels={'month': 'Month', 'order_count': 'Number of Orders'},
+).update_traces(mode='lines+markers')
+
+fig.update_layout(
+    xaxis=dict(tickmode='array', tickvals=monthly_counts['month'], ticktext=monthly_counts['month']),
+    yaxis=dict(tickformat=',d')
+)
+st.plotly_chart(fig)
