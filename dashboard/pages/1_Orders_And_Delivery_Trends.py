@@ -109,7 +109,7 @@ fig.add_annotation(
 fig.update_layout(
     title="Delivery Time Gap Distribution",
     xaxis_title="Delivery Time Gap (hrs)",
-    yaxis_title="Density",
+    yaxis_title="Number of Orders",
     template="simple_white",
     legend=dict(
         orientation="h",
@@ -129,3 +129,21 @@ col1.metric("Early Delivered Orders (%)", f"{(x_values > 12).mean() * 100:.1f}%"
 col2.metric("Late Delivered Orders (%)", f"{(x_values < -12).mean() * 100:.1f}%")
 col3.metric("Delivered on Estimated Day (%)", f"{(x_values.between(-12,12)).mean() * 100:.1f}%")
 col4.metric("Average Delivery Time (hrs)", f"{x_values.mean():.2f}")
+
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Purchase to Approval & Approval to Delivery Time Analysis</h2>""", unsafe_allow_html=True)
+
+df_melted = orders.melt(value_vars=["purchase_to_approval_hours", "approval_to_delivery_hours"], var_name="Metric", value_name="Value")
+
+# Plot
+fig = px.histogram(
+    df_melted,
+    x="Value",
+    color="Metric",
+    facet_col="Metric",  # Side-by-side plots
+    nbins=20,
+    opacity=0.6
+)
+
+fig.update_layout(template="simple_white")
+
+st.plotly_chart(fig)
