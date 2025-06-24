@@ -130,20 +130,27 @@ col2.metric("Late Delivered Orders (%)", f"{(x_values < -12).mean() * 100:.1f}%"
 col3.metric("Delivered on Estimated Day (%)", f"{(x_values.between(-12,12)).mean() * 100:.1f}%")
 col4.metric("Average Delivery Time (hrs)", f"{x_values.mean():.2f}")
 
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Purchase to Approval & Approval to Delivery Time Analysis</h2>""", unsafe_allow_html=True)
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Order Status Time Gap Analysis</h2>""", unsafe_allow_html=True)
 
-df_melted = orders.melt(value_vars=["purchase_to_approval_hours", "approval_to_delivery_hours"], var_name="Metric", value_name="Value")
+col1, col2 = st.columns(2)
+st.write(orders[orders['order_status'] != 'delivered'])
 
-# Plot
 fig = px.histogram(
-    df_melted,
-    x="Value",
-    color="Metric",
-    facet_col="Metric",  # Side-by-side plots
-    nbins=20,
+    orders,
+    x=orders['purchase_to_approval_hours'],
+    nbins=100,
+    title="Order Approval Time Distribution",
+    template="plotly_white",
+    marginal="box",
     opacity=0.6
 )
 
-fig.update_layout(template="simple_white")
-
-st.plotly_chart(fig)
+# Improve layout
+fig.update_layout(
+    xaxis_title="Order Purchase to Approval Time (hours)",
+    yaxis_title="Count",
+    bargap=0.05,
+    title_x=0.5
+)
+fig.update_traces(marker_line_width=1, marker_line_color="white")
+col1.plotly_chart(fig)
