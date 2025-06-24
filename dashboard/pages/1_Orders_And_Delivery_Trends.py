@@ -211,3 +211,12 @@ fig.update_layout(
 )
 fig.update_traces(marker_line_width=1, marker_line_color="white")
 col3.plotly_chart(fig)
+
+with st.expander("Order Status Time Gap Summary"):
+    st.markdown("- Most orders are approved very quickly (less than 10 hours), showing efficient processing but has room for improvement, may be automated.")
+    st.markdown("- Approval-to-delivery timelines are fairly good, and show expected minor outliers.")
+    st.markdown("- Again, there is a lot of room for improvement in logistics for approval-to-delivery time.")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Avg Purchase→Approval (hrs)", f"{filtered_orders['purchase_to_approval_hours'].mean():.1f}")
+    col2.metric("Avg Approval→Delivery (hrs)", f"{filtered_orders['approval_to_delivery_hours'].mean():.1f}")
+    col3.metric("% Approvals < 1 hr", f"{(filtered_orders['purchase_to_approval_hours'] < 1).mean() * 100:.1f}%")
