@@ -19,37 +19,43 @@ This page explores key trends in order volumes, statuses, and delivery timelines
 Understand how the platform performs across order fulfillment stages.  
 """)
 
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
-col1, col2 = st.columns(2)
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Orders Analyzed", f"{orders.shape[0]:,}")
+col2.metric("Delivery Success Rate", f"{(orders['order_status'] == 'delivered').mean() * 100:.1f}%")
+col3.metric("Avg Delivery Time (hrs)", f"{orders['delivery_time_gap_hrs'].mean():.2f} hrs")
 
-# Create bar plot
+
+col1, col2 = st.columns(2)
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
+st.markdown("<p style='font-style:italic;'>Click on legend items to filter specific order statuses for better visibility.</p>", unsafe_allow_html=True)
 fig = px.bar(
     orders['order_status'].value_counts().reset_index(name='count').rename(columns={'index': 'order_status'}),
-    x='order_status',
-    y='count',
-    color='order_status',
-    title='Order Status Distribution',
+    x="order_status",
+    y="count",
+    color="order_status",
+    title="Order Status Distribution (Log Scale (base 10))",
     text='count',
     labels={'order_status': 'Order Status', 'count': 'Number of Orders'},
 )
 
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-
-# Show plot
+fig.update_yaxes(dtick=1, title="Number of Orders (log base 10)", type='log', tickformat=',d')
 col1.plotly_chart(fig)
 
-col2.plotly_chart(
-    px.bar(
-        orders[orders['order_status'] != 'delivered']['order_status'].value_counts().reset_index(name='count').rename(columns={'index': 'order_status'}),
-        x='order_status',
-        y='count',
-        color='order_status',
-        title='Order Status Distribution (Excluding Delivered)',
-        text='count',
-        labels={'order_status': 'Order Status', 'count': 'Number of Orders'},
-    ).update_traces(textposition='outside').update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+# pie chart for Order Status Distribution
+fig = px.pie(
+    orders['order_status'].value_counts().reset_index(name='count').rename(columns={'index': 'order_status'}),
+    names='order_status',
+    values='count',
+    title='Order Status Distribution',
+    labels={'order_status': 'Order Status', 'count': 'Number of Orders'},
+    hole=0.4,
+    color_discrete_sequence=px.colors.qualitative.Pastel
 )
+fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
+col2.plotly_chart(fig)
+
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Order Volume Trends</h2>""", unsafe_allow_html=True)
 
@@ -132,20 +138,18 @@ col4.metric("Average Delivery Time (hrs)", f"{x_values.mean():.2f}")
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Order Status Time Gap Analysis</h2>""", unsafe_allow_html=True)
 
-col1, col2 = st.columns(2)
-st.write(orders[orders['order_status'] != 'delivered'])
-
+col1, col2, col3 = st.columns([1, 4.5, 4.5])
+bin_count = col1.slider("Number of bins:", min_value=5, max_value=100, value=20, step=1)
 fig = px.histogram(
     orders,
     x=orders['purchase_to_approval_hours'],
-    nbins=100,
+    nbins=bin_count,
     title="Order Approval Time Distribution",
     template="plotly_white",
     marginal="box",
-    opacity=0.6
+    opacity=0.6,
+    color_discrete_sequence=["#C363FA"],
 )
-
-# Improve layout
 fig.update_layout(
     xaxis_title="Order Purchase to Approval Time (hours)",
     yaxis_title="Count",
@@ -153,4 +157,23 @@ fig.update_layout(
     title_x=0.5
 )
 fig.update_traces(marker_line_width=1, marker_line_color="white")
-col1.plotly_chart(fig)
+col2.plotly_chart(fig)
+
+fig = px.histogram(
+    orders,
+    x=orders[orders['approval_to_delivery_hours'] >= 0]['approval_to_delivery_hours'],
+    nbins=bin_count,
+    title="Order Approval Time Distribution",
+    template="plotly_white",
+    marginal="box",
+    opacity=0.6,
+    color_discrete_sequence=["#63FAED"]
+)
+fig.update_layout(
+    xaxis_title="Order Purchase to Approval Time (hours)",
+    yaxis_title="Count",
+    bargap=0.05,
+    title_x=0.5
+)
+fig.update_traces(marker_line_width=1, marker_line_color="white")
+col3.plotly_chart(fig)
