@@ -36,8 +36,18 @@ filtered_orders = filtered_orders[filtered_orders["order_status"].isin(selected_
 filtered_customers = customers[customers["customer_id"].isin(filtered_orders["customer_id"])]
 filtered_customers = filtered_customers[filtered_customers["customer_state"].isin(selected_states)]
 
-customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index()
-customers_by_state = customers_by_state.rename(columns={'customer_id': 'orders_count'})
+# mapping tool for customer by region
+state_to_region = {
+    state: region
+    for region, states in region_states_dict.items()
+    for state in states
+}
+filtered_customers["customer_region"] = filtered_customers["customer_state"].map(state_to_region)
+
+customers_by_region = filtered_customers.groupby("customer_region")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"})
+customers_by_region = customers_by_region.sort_values(by="orders_count", ascending=False)
+customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index().rename(columns={'customer_id': 'orders_count'})
+customers_by_state = customers_by_state.sort_values(by="orders_count", ascending=False)
 
 st.title("Customer Geography and Behavior Analysis")
 st.markdown("""
@@ -46,38 +56,64 @@ Gain insights into key markets and delivery challenges.
 <p style='font-style:italic; margin-top:-8px;'>*Use side bar for filters</p>
 """, unsafe_allow_html=True)
 st.markdown("**customer_id* is not a unique identifier for customers, hence customer lack unique id in this dataset.")
+st.markdown("<p style='font-style:italic;'>Click on legend items or bars to filter specific order statuses for better visibility.*</p>", unsafe_allow_html=True)
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Unique Customers Ids", f"{filtered_customers.shape[0]:,}")
 col2.metric("Cities Reached", f"{(filtered_customers['customer_city'].nunique())}")
 col3.metric("Top State", f"{customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']} ({state_names_dict[customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']]})")
 
+col1, col2 = st.columns(2)
+fig = px.bar(
+    customers_by_region,
+    x="customer_region",
+    y="orders_count",
+    color="customer_region",
+    title="Region-Wise Order Distribution",
+    text='orders_count',
+    labels={'customer_region': 'Region', 'orders_count': 'Number of Orders'}
+)
+fig.update_traces(textposition='outside')
+fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+col1.plotly_chart(fig)
 
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
-st.markdown("<p style='font-style:italic;'>Click on legend items or bars to filter specific order statuses for better visibility.</p>", unsafe_allow_html=True)
+fig = px.pie(
+    customers_by_region,
+    names='customer_region',
+    values='orders_count',
+    title='Region Orders Distribution',
+    labels={'customer_region': 'Region', 'orders_count': 'Number of Orders'},
+    hole=0.4,
+    color_discrete_sequence=px.colors.qualitative.Pastel
+)
+fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
+col2.plotly_chart(fig)
+
+# st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
 fig = px.bar(
     customers_by_state,
     x="customer_state",
     y="orders_count",
     color="customer_state",
-    title="Customer State Distribution",
+    title="State-Wise Order Distribution",
     text='orders_count',
-    labels={'customer_state': 'State', 'orders_count': 'Number of Orders'},
+    labels={'customer_state': 'State', 'orders_count': 'Number of Orders'}
 )
-
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 
-
-with st.expander("Order Status Distribution Summary"):
-    st.markdown("- Delivered orders dominate, showing a great order fulfillment performance.")
-    st.markdown("- Shipped and canceled and other statuses are very rare, showing the platform's reliability.")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Delivered Orders %", f"{(filtered_orders['order_status'] == 'delivered').mean() * 100:.2f}%")
-    col2.metric("Cancelled Orders %", f"{(filtered_orders['order_status'] == 'canceled').mean() * 100:.2f}%")
-    col3.metric("Other Statuses %", f"{(~filtered_orders['order_status'].isin(['delivered', 'canceled'])).mean() * 100:.2f}%")
-
+col1, col2 = st.columns([1.5,1])
+col2.plotly_chart(
+    px.bar(
+        filtered_customers.groupby("customer_city")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"}).sort_values("orders_count", ascending=False).head(10),
+        x="customer_city",
+        y="orders_count",
+        title="Top 10 Cities by Number of Orders",
+        labels={"customer_city": "City", "orders_count": "Number of Orders"},
+        color="customer_city"
+    )
+)
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Order Volume Trends</h2>""", unsafe_allow_html=True)
 
