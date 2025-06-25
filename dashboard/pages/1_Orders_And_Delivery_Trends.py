@@ -4,12 +4,11 @@ import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-
+from scripts.utils import expander_styles
 from scripts.data_cleaning import import_data
 
 # configuring page
 st.set_page_config(page_title="Orders and Delivery Trends - EDA", page_icon="📦", initial_sidebar_state="expanded", layout='wide')
-
 # importing data
 orders, order_items, customers, payments, products = import_data(dashboard=True)
 
@@ -35,7 +34,7 @@ Understand how the platform performs across order fulfillment stages.
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Orders Analyzed", f"{filtered_orders.shape[0]:,}")
 col2.metric("Delivery Success Rate", f"{(filtered_orders['order_status'] == 'delivered').mean() * 100:.1f}%")
-col3.metric("Avg Delivery Time (hrs)", f"{filtered_orders['delivery_time_gap_hrs'].mean():.2f} hrs")
+col3.metric("Avg Delivery Time (hrs)", f"{filtered_orders['delivery_time_gap_hrs'].mean() if not bool(filtered_orders['delivery_time_gap_hrs'].mean()) else 0:.2f} hrs")
 
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
@@ -94,6 +93,41 @@ fig.update_layout(
     xaxis=dict(tickmode='array', tickvals=monthly_counts['month'], ticktext=monthly_counts['month']),
     yaxis=dict(tickformat=',d')
 )
+if selected_year == 'All' or selected_year == 2017:
+    fig.add_annotation(
+        x=monthly_counts[monthly_counts['month'] == '05-2017'].iloc[0]['month'],
+        y=monthly_counts['order_count'].max() * 0.55,
+        text="Consistent Growth in Usage",
+        font=dict(color="Lime", size=16),
+        showarrow=True
+    )
+if selected_year == 'All' or selected_year == 2017:
+    fig.add_annotation(
+        x=monthly_counts['month'].iloc[monthly_counts['order_count'].idxmax()],
+        y=monthly_counts['order_count'].max(),
+        text="Black Friday Peak",
+        font=dict(color="orange", size=16),
+        showarrow=True,
+        xshift=-10
+    )
+if selected_year == 'All' or selected_year == 2018:
+    fig.add_annotation(
+        x=monthly_counts[monthly_counts['month'] == '01-2018'].iloc[0]['month'],
+        y=monthly_counts['order_count'].max(),
+        text="Carnival Peak",
+        font=dict(color="Yellow", size=16),
+        showarrow=True,
+        yshift=-12
+    )
+if selected_year == 'All' or selected_year == 2018:
+    fig.add_annotation(
+        x=monthly_counts[monthly_counts['month'] == '05-2018'].iloc[0]['month'],
+        y=monthly_counts['order_count'].max(),
+        text="Decrease in Rainy Season",
+        font=dict(color="blue", size=16),
+        showarrow=True,
+        xshift=-10
+    )
 st.plotly_chart(fig)
 
 with st.expander("Monthly Order Trends Summary"):
