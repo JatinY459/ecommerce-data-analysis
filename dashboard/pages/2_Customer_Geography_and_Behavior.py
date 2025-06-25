@@ -4,7 +4,7 @@ import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from scripts.utils import expander_styles, get_state_code_names
+from scripts.utils import expander_styles, get_state_code_names, get_region_states
 from scripts.data_cleaning import import_data
 
 # configuring page
@@ -12,6 +12,7 @@ st.set_page_config(page_title="Customer Geography & Behavior - EDA", page_icon="
 # importing data
 orders, order_items, customers, payments, products = import_data(dashboard=True)
 state_names_dict = get_state_code_names()
+region_states_dict = get_region_states()
 # filter
 st.sidebar.header("Filters")
 selected_year = st.sidebar.selectbox("Select Year:", options=[2017, 2018, 'All'], index=2)
@@ -20,6 +21,12 @@ selected_order_status = st.sidebar.multiselect(
     options=["delivered", "shipped", "canceled", "approved", "processing", "invoiced"],
     default=["delivered", "shipped", "canceled", "approved", "processing", "invoiced"]
 )
+selected_regions = st.sidebar.multiselect(
+    "Select Region:",
+    options=list(region_states_dict.keys()),
+    default=list(region_states_dict.keys())
+)
+selected_states = [state for region in selected_regions for state in region_states_dict[region]]
 
 # TODO: see if these filters are needed or not
 filtered_orders = orders[orders["order_purchase_timestamp"].dt.year == int(selected_year)] if selected_year != 'All' else orders
@@ -27,6 +34,8 @@ filtered_orders = filtered_orders[filtered_orders["order_status"].isin(selected_
 
 # TODO: see if i can filter customers based on filtered orders
 filtered_customers = customers[customers["customer_id"].isin(filtered_orders["customer_id"])]
+filtered_customers = filtered_customers[filtered_customers["customer_state"].isin(selected_states)]
+
 customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index()
 customers_by_state = customers_by_state.rename(columns={'customer_id': 'orders_count'})
 
@@ -44,36 +53,22 @@ col2.metric("Cities Reached", f"{(filtered_customers['customer_city'].nunique())
 col3.metric("Top State", f"{customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']} ({state_names_dict[customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']]})")
 
 
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
-st.markdown("<p style='font-style:italic;'>Click on legend items to filter specific order statuses for better visibility.</p>", unsafe_allow_html=True)
-col1, col2 = st.columns(2)
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
+st.markdown("<p style='font-style:italic;'>Click on legend items or bars to filter specific order statuses for better visibility.</p>", unsafe_allow_html=True)
 fig = px.bar(
-    filtered_orders['order_status'].value_counts().reset_index(name='count').rename(columns={'index': 'order_status'}),
-    x="order_status",
-    y="count",
-    color="order_status",
-    title="Order Status Distribution (Log Scale (base 10))",
-    text='count',
-    labels={'order_status': 'Order Status', 'count': 'Number of Orders'},
+    customers_by_state,
+    x="customer_state",
+    y="orders_count",
+    color="customer_state",
+    title="Customer State Distribution",
+    text='orders_count',
+    labels={'customer_state': 'State', 'orders_count': 'Number of Orders'},
 )
 
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-fig.update_yaxes(dtick=1, title="Number of Orders (log base 10)", type='log', tickformat=',d')
-col1.plotly_chart(fig)
+st.plotly_chart(fig)
 
-# pie chart for Order Status Distribution
-fig = px.pie(
-    filtered_orders['order_status'].value_counts().reset_index(name='count').rename(columns={'index': 'order_status'}),
-    names='order_status',
-    values='count',
-    title='Order Status Distribution',
-    labels={'order_status': 'Order Status', 'count': 'Number of Orders'},
-    hole=0.4,
-    color_discrete_sequence=px.colors.qualitative.Pastel
-)
-fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
-col2.plotly_chart(fig)
 
 with st.expander("Order Status Distribution Summary"):
     st.markdown("- Delivered orders dominate, showing a great order fulfillment performance.")

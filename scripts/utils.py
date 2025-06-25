@@ -42,3 +42,11 @@ def get_state_code_names():
         "SE": "Sergipe",
         "TO": "Tocantins"
     }
+def get_region_states():
+    return {
+        "North": ["AC", "AP", "AM", "PA", "RO", "RR", "TO"],
+        "North-East": ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"],
+        "Mid-West": ["DF", "GO", "MT", "MS"],
+        "South-East": ["ES", "MG", "RJ", "SP"],
+        "South": ["PR", "RS", "SC"]
+    }
