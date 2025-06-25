@@ -4,14 +4,14 @@ import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from scripts.utils import expander_styles
+from scripts.utils import expander_styles, get_state_code_names
 from scripts.data_cleaning import import_data
 
 # configuring page
 st.set_page_config(page_title="Customer Geography & Behavior - EDA", page_icon="👤", initial_sidebar_state="expanded", layout='wide')
 # importing data
 orders, order_items, customers, payments, products = import_data(dashboard=True)
-
+state_names_dict = get_state_code_names()
 # filter
 st.sidebar.header("Filters")
 selected_year = st.sidebar.selectbox("Select Year:", options=[2017, 2018, 'All'], index=2)
@@ -21,20 +21,27 @@ selected_order_status = st.sidebar.multiselect(
     default=["delivered", "shipped", "canceled", "approved", "processing", "invoiced"]
 )
 
+# TODO: see if these filters are needed or not
 filtered_orders = orders[orders["order_purchase_timestamp"].dt.year == int(selected_year)] if selected_year != 'All' else orders
 filtered_orders = filtered_orders[filtered_orders["order_status"].isin(selected_order_status)]
 
-st.title("Orders and Delivery Trends")
+# TODO: see if i can filter customers based on filtered orders
+filtered_customers = customers[customers["customer_id"].isin(filtered_orders["customer_id"])]
+customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index()
+customers_by_state = customers_by_state.rename(columns={'customer_id': 'orders_count'})
+
+st.title("Customer Geography and Behavior Analysis")
 st.markdown("""
-This page explores key trends in order volumes, statuses, and delivery timelines.  
-Understand how the platform performs across order fulfillment stages.  
+This page explores where customers come from, their order patterns, and regional influences on logistics and engagement.  
+Gain insights into key markets and delivery challenges.  
 <p style='font-style:italic; margin-top:-8px;'>*Use side bar for filters</p>
 """, unsafe_allow_html=True)
+st.markdown("**customer_id* is not a unique identifier for customers, hence customer lack unique id in this dataset.")
 
 col1, col2, col3 = st.columns(3)
-col1.metric("Total Orders Analyzed", f"{filtered_orders.shape[0]:,}")
-col2.metric("Delivery Success Rate", f"{(filtered_orders['order_status'] == 'delivered').mean() * 100:.1f}%")
-col3.metric("Avg Delivery Time (hrs)", f"{filtered_orders['delivery_time_gap_hrs'].mean() if bool(filtered_orders['delivery_time_gap_hrs'].mean()) else 0:.2f} hrs")
+col1.metric("Total Unique Customers Ids", f"{filtered_customers.shape[0]:,}")
+col2.metric("Cities Reached", f"{(filtered_customers['customer_city'].nunique())}")
+col3.metric("Top State", f"{customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']} ({state_names_dict[customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']]})")
 
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
