@@ -34,7 +34,7 @@ Understand how the platform performs across order fulfillment stages.
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Orders Analyzed", f"{filtered_orders.shape[0]:,}")
 col2.metric("Delivery Success Rate", f"{(filtered_orders['order_status'] == 'delivered').mean() * 100:.1f}%")
-col3.metric("Avg Delivery Time (hrs)", f"{filtered_orders['delivery_time_gap_hrs'].mean() if not bool(filtered_orders['delivery_time_gap_hrs'].mean()) else 0:.2f} hrs")
+col3.metric("Avg Delivery Time (hrs)", f"{filtered_orders['delivery_time_gap_hrs'].mean() if bool(filtered_orders['delivery_time_gap_hrs'].mean()) else 0:.2f} hrs")
 
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for Order Statuses for all Orders</h2>""", unsafe_allow_html=True)
