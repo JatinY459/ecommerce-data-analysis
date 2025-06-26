@@ -72,7 +72,7 @@ st.markdown("<p style='font-style:italic;'>Click on legend items or bars to filt
 
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Unique Customers Ids", f"{filtered_customers.shape[0]:,}")
-col2.metric("Cities Reached", f"{(filtered_customers['customer_city'].nunique())}")
+col2.metric("Cities with Orders", f"{(filtered_customers['customer_city'].nunique())}")
 col3.metric("Top State", f"{customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']} ({state_names_dict[customers_by_state.loc[customers_by_state['orders_count'].idxmax(), 'customer_state']]})")
 
 col1, col2 = st.columns(2)
@@ -103,7 +103,12 @@ fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate
 col2.plotly_chart(fig)
 
 with st.expander("Region-Wise Order Distribution Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+    st.markdown("""- The **South-East region dominates order volume**, accounting for around 69% of total orders, driven by economically strong states like SP, RJ, and MG.
+- The **North region contributes just 1.8%**, reflecting its less population and poor infrastructure.
+- The distribution shows clear **regional concentration** of e-commerce usage in urban hubs.""")
+    col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+    col2.metric("highest volume region to second highest", f"{(customers_by_state.iloc[0]["orders_count"]/customers_by_state.iloc[1]["orders_count"]) * 100:.2f} %")
+    col3.metric("highest volume region to lowest", f"{(customers_by_state.iloc[0]["orders_count"]/customers_by_state.iloc[-1]["orders_count"]) * 100:.2f} %")
 
 agg_df = filtered_customers.groupby(["customer_region", "customer_state"]).agg(order_count=("customer_id", "count")).reset_index()
 fig = px.treemap(
@@ -126,7 +131,15 @@ fig.update_layout(
 )
 st.plotly_chart(fig)
 with st.expander("Region & State Orders Volume Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+    st.markdown("""
+- The treemap reinforces that **SP, RJ, and MG are the top-performing states**, leading order volume significantly.
+- Northern states like RR, AC, and AP combined contribute just **0.02% of total orders**.
+- Federal District (DF) despite being very small contributes about 2% of total orders due to its administrative importance.
+    """)
+    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
+    col2.metric("Top 3 States Combined %", f"{(customers_by_state.head(3)['orders_count'].sum()) / (customers_by_state['orders_count'].sum()) * 100:.2f} %")
+    col3.metric("Bottom 3 Contributing States Combined %", f"{(customers_by_state.tail(3)['orders_count'].sum()) / (customers_by_state['orders_count'].sum()) * 100:.2f} %")
+    col4.metric("Orders from Least Contributing States", f"{customers_by_state.tail(3)['orders_count'].sum()}")
 
 # st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
@@ -158,12 +171,18 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 col2.plotly_chart(fig)
 
-with col1.expander("Region-Wise Order Distribution Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
-with col2.expander("State-Wise Order Distribution Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+with st.expander("Region-Wise Order Distribution Summary"):
+    st.markdown("""
+- **Only 3 states cross 5,000 orders**, emphasizing the strong reliance on key regions.
+- 12 states surpass the 1,000 order mark, showing **limited platform reach across Brazil**.
+- Majority of states contribute normally, highlighting opportunity for regional expansion.
+""")
+    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
+    col2.metric("No. of States with > 5k orders", len(customers_by_state[customers_by_state["orders_count"] > 5000]))
+    col3.metric("No. of States with > 1k orders", len(customers_by_state[customers_by_state["orders_count"] > 1000]))
+    col4.metric("States with Least Orders", f"{customers_by_state.iloc[-1]['customer_state']}, {customers_by_state.iloc[-2]['customer_state']}, {customers_by_state.iloc[-3]['customer_state']}")
 
-col1, col2 = st.columns([1,1])
+col1, col2 = st.columns(2)
 col1.plotly_chart(
     px.bar(
         cust_orders_delivery_time_by_region,
@@ -182,14 +201,25 @@ col2.plotly_chart(
         values="orders_count",
         title="Top 10 Cities by Number of Orders",
         labels={"customer_city": "City", "orders_count": "Number of Orders"},
-        color="customer_city"
-    )
+        color="customer_city",
+        hole=0.4
+    ).update_traces(textposition='inside', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
 )
 with col1.expander("Avg Delivery Time by Region Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
-with col2.expander("Top 10 Cities by Number of Orders Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+    st.markdown("""
+- The **North region has the longest average delivery time at ~15 days**, due to remoteness and logistical challenges.
+- South-East and North-East regions show **faster delivery, averaging around 11 days**.
+- Indicates room to improve service levels and aim for delivery in a week, for key regions.
+""")
+    st.metric("Slowest Delivery Region", f"{cust_orders_delivery_time_by_region.iloc[-1]['customer_region']}, ~{int(cust_orders_delivery_time_by_region['avg_delivery_time'].max()//24)} days")
 
+with col2.expander("Top 10 Cities by Number of Orders Summary"):
+    st.markdown("""
+- The **top 10 cities contribute highly in the total orders**, indicating a strong urban demand.
+- In these economic centres, **São Paulo** leads significantly, followed by **Rio de Janeiro** and **Belo Horizonte**.
+- These cities individually account for thousands of orders, implying high demand & opportunity for betterment in logistics here.
+""")
+    st.metric("", )
 
 # st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Shipping Price Patterns by Region & State</h2>""", unsafe_allow_html=True)
 fig = px.bar(
