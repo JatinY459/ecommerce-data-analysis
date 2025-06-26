@@ -215,11 +215,11 @@ with col1.expander("Avg Delivery Time by Region Summary"):
 
 with col2.expander("Top 10 Cities by Number of Orders Summary"):
     st.markdown("""
-- The **top 10 cities contribute highly in the total orders**, indicating a strong urban demand.
+- The **top 10 cities contribute to ~35% of the total orders**, indicating a strong urban demand.
 - In these economic centres, **São Paulo** leads significantly, followed by **Rio de Janeiro** and **Belo Horizonte**.
 - These cities individually account for thousands of orders, implying high demand & opportunity for betterment in logistics here.
 """)
-    st.metric("", )
+    st.metric("Contribution of Top 10 cities in Total Orders", f"{filtered_customers.groupby("customer_city")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"}).sort_values("orders_count", ascending=False).head(10)['orders_count'].sum() / filtered_customers['customer_id'].nunique() * 100:.2f}%")
 
 # st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Shipping Price Patterns by Region & State</h2>""", unsafe_allow_html=True)
 fig = px.bar(
@@ -235,8 +235,15 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 with st.expander("Shipping Price Distribution by State Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
-
+    st.markdown("""
+- Most states show consistent mean shipping price around **42**.
+- North/North-East states exhibit **higher shipping charges**, reflecting logistic challenges.
+- Roraima (RR) shows lowest shipping cost, it is likely a skewed result, as it has only 34 orders.
+""")
+    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
+    col2.metric("Mean Shipping Price", f"{cust_orders_items['shipping_charges'].mean():.2f}")
+    col3.metric("Highest Mean Shipping Price State", f"{ship_price_by_state.iloc[0]['customer_state']}, {ship_price_by_state['avg_shipping_charges'].max():.2f}")
+    col4.metric("Lowest Mean Shipping Price State", f"{ship_price_by_state.iloc[-1]['customer_state']}, {ship_price_by_state['avg_shipping_charges'].min():.2f}")
 
 col1, col2 = st.columns([1, 1])
 fig = px.bar(
@@ -273,6 +280,14 @@ fig.update_layout(
 col2.plotly_chart(fig)
 
 with col1.expander("Shipping Price Patterns Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+    st.markdown("""
+- North and North-East regions have the **highest average shipping prices (47, 45)**.
+- South, South-East, and Mid-West are **more cost-efficient (~41-42)**.
+- Highlights potential for cost optimization in remote regions. And opportunity to reduce costs in high volume regions too.
+""")
 with col2.expander("Shipping-Charges by Region Summary"):
-    st.markdown("write content here, and METRICS/KPIs")
+    st.markdown("""
+- Outliers with **very high shipping prices** exist, but are rare compared to total orders.
+- 75% of shipping costs stay below **56 in most regions**, slightly higher (59 & 61) in North/North-East.
+- North shows **highest median shipping price at 39** (in North region), with overall median near 35.
+""")
