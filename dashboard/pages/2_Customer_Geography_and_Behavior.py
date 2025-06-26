@@ -65,11 +65,8 @@ st.title("Customer Geography and Behavior Analysis")
 st.markdown("""
 This page explores where customers come from, their order patterns, and regional influences on logistics and engagement.  
 Gain insights into key markets and delivery challenges.  
-<p style='font-style:italic; margin-top:-8px;'>*Use side bar for filters</p>
+<p style='font-style:italic; margin-top:-8px; font-weight:700;'>Note: Use side bar for filters</p>
 """, unsafe_allow_html=True)
-st.markdown("**customer_id* is not a unique identifier for customers, hence customer lack unique id in this dataset.")
-st.markdown("<p style='font-style:italic;'>Click on legend items or bars to filter specific order statuses for better visibility.*</p>", unsafe_allow_html=True)
-
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Unique Customers Ids", f"{filtered_customers.shape[0]:,}")
 col2.metric("Cities with Orders", f"{(filtered_customers['customer_city'].nunique())}")
