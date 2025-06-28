@@ -64,7 +64,7 @@ ship_price_by_region = ship_price_by_region.sort_values(by="avg_shipping_charges
 st.title("Customer Geography and Behavior Analysis")
 st.markdown("""
 This page explores where customers come from, their order patterns, and regional influences on logistics and engagement.  
-Gain insights into key markets and delivery challenges.  
+Understand the trends and behavior in key markets and delivery challenges.  
 <p style='font-style:italic; margin-top:-8px; font-weight:700;'>Note: Use side bar for filters</p>
 """, unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
