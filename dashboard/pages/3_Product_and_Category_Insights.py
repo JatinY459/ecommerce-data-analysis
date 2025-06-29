@@ -147,12 +147,12 @@ with st.expander("Products Categories Top 5 vs Others Summary"):
 
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Categories Distribution by Order Volume & Unique Products</h2>
             Options:""", unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
 selected_quantity = st.selectbox(
     "Select quantity to show:",
     options=["Unique Products", "Order Volume"],
     index=0
     )
+col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
 orders_by_products = products_items_orders.groupby("product_category_name")["order_id"].count().reset_index().rename(columns={'order_id':'order_counts'})
 orders_by_products = orders_by_products.sort_values(by="order_counts", ascending=False)
 category_view = col2.radio(
