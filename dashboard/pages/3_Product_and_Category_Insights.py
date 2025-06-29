@@ -145,9 +145,14 @@ with st.expander("Products Categories Top 5 vs Others Summary"):
     col1.metric("Mean no. of Products [Including Toys]", f"{products_by_category['products_count'].mean():.2f}")
     col2.metric("Mean no. of Products [Excluding Toys]", f"{products_by_category[products_by_category['product_category_name'] !='toys']['products_count'].mean():.2f}")
 
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Product Categories Distribution</h2>
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Categories Distribution by Order Volume & Unique Products</h2>
             Options:""", unsafe_allow_html=True)
 col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
+selected_quantity = st.selectbox(
+    "Select quantity to show:",
+    options=["Unique Products", "Order Volume"],
+    index=0
+    )
 orders_by_products = products_items_orders.groupby("product_category_name")["order_id"].count().reset_index().rename(columns={'order_id':'order_counts'})
 orders_by_products = orders_by_products.sort_values(by="order_counts", ascending=False)
 category_view = col2.radio(
@@ -163,86 +168,64 @@ n = col3.slider(
     value=15
 )
 if category_view == "Top N":
-    fig = px.bar(
-    orders_by_products.iloc[1:n+1],
-    x="product_category_name",
-    y="order_counts",
-    color="product_category_name",
-    title=f"Products Order Count by Categories (Top {n}) [Excluding Toys]",
-    text='order_counts',
-    labels={'product_category_name': 'Product Group', 'order_counts': 'Number of Orders'},
-    template="plotly_white"
-    )
+    if selected_quantity == "Order Volume":
+            fig = px.bar(
+            orders_by_products.iloc[1:n+1],
+            x="product_category_name",
+            y="order_counts",
+            color="product_category_name",
+            title=f"Products Order Count by Categories (Top {n}) [Excluding Toys]",
+            text='order_counts',
+            labels={'product_category_name': 'Product Group', 'order_counts': 'Number of Orders'},
+            template="plotly_white"
+        )
+    elif selected_quantity == "Unique Products":
+        fig = px.bar(
+            products_by_category.iloc[1:n+1],
+            x="product_category_name",
+            y="products_count",
+            color="product_category_name",
+            title=f"Product Categories Distribution (Top {n}) [Excluding Toys]",
+            text='products_count',
+            labels={'product_category_name': 'Category', 'products_count': 'Number of Products'},
+            template="plotly_white"
+        )
 elif category_view == "Bottom N":
-    fig = px.bar(
-        orders_by_products.iloc[-n:-1],
-        x="product_category_name",
-        y="order_count",
-        color="product_category_name",
-        title=f"Products Order Count by Categories (Bottom {n})",
-        text='order_count',
-        labels={'product_category_name': 'Category', 'order_count': 'Number of Orders'},
-        template="plotly_white"
-    )
+    if selected_quantity == "Order Volume":
+        fig = px.bar(
+            orders_by_products.iloc[-n:-1],
+            x="product_category_name",
+            y="order_count",
+            color="product_category_name",
+            title=f"Products Order Count by Categories (Bottom {n})",
+            text='order_count',
+            labels={'product_category_name': 'Category', 'order_count': 'Number of Orders'},
+            template="plotly_white"
+        )
+    elif selected_quantity == "Unique Products":
+        fig = px.bar(
+            products_by_category.iloc[-n:-1],
+            x="product_category_name",
+            y="products_count",
+            color="product_category_name",
+            title=f"Product Categories Distribution (Bottom {n})",
+            text='products_count',
+            labels={'product_category_name': 'Category', 'products_count': 'Number of Products'},
+            template="plotly_white"
+        )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
-
-with st.expander("Category Order Volume Summary"):
-    st.markdown("Show Number of Orders for Toys & compare toys % to others")
-
-# category distro
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Product Categories Distribution</h2>
-            Options:""", unsafe_allow_html=True)
-col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
-category_view = col2.radio(
-    "View Categories by Product Count",
-    options=["Top N", "Bottom N"],
-    index=0,
-    horizontal=True
-)
-n = col3.slider(
-    f"Select number of categories to display",
-    min_value=1,
-    max_value=min(35, 69),
-    value=15
-)
-if category_view == "Top N":
-    fig = px.bar(
-        products_by_category.iloc[1:n+1],
-        x="product_category_name",
-        y="products_count",
-        color="product_category_name",
-        title=f"Product Categories Distribution (Top {n}) [Excluding Toys]",
-        text='products_count',
-        labels={'product_category_name': 'Category', 'products_count': 'Number of Products'},
-        template="plotly_white"
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    st.plotly_chart(fig)
-
-if category_view == "Bottom N":
-    fig = px.bar(
-        products_by_category.iloc[-n:-1],
-        x="product_category_name",
-        y="products_count",
-        color="product_category_name",
-        title=f"Product Categories Distribution (Bottom {n})",
-        text='products_count',
-        labels={'product_category_name': 'Category', 'products_count': 'Number of Products'},
-        template="plotly_white"
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    st.plotly_chart(fig)
-
-with st.expander("Top Product Categories Distribution Summary"):
-    st.markdown("""Write the summaries & Metrics/KPIs here""")
-    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
-    col2.metric("Mean number of Products (filtered view)", f"{products_by_category.iloc[1:n+1]["products_count"].mean() if category_view=="Top N" else products_by_category.iloc[-n:-1]["products_count"].mean():.2f}")
-    col3.metric("Categories with < 10 Products", len(products_by_category[products_by_category['products_count'] < 10]))
-    col4.metric("Categories with > 100 Products", f"{len(products_by_category[products_by_category['products_count'] > 100])}")
+if selected_quantity == "Order Volume":
+    with st.expander("Category Order Volume Summary"):
+        st.markdown("Show Number of Orders for Toys & compare toys % to others")
+elif selected_quantity == "Unique Products":
+    with st.expander("Top Product Categories Distribution Summary"):
+        st.markdown("""Write the summaries & Metrics/KPIs here""")
+        col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
+        col2.metric("Mean number of Products (filtered view)", f"{products_by_category.iloc[1:n+1]["products_count"].mean() if category_view=="Top N" else products_by_category.iloc[-n:-1]["products_count"].mean():.2f}")
+        col3.metric("Categories with < 10 Products", len(products_by_category[products_by_category['products_count'] < 10]))
+        col4.metric("Categories with > 100 Products", f"{len(products_by_category[products_by_category['products_count'] > 100])}")
 
 st.divider()
 # st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
