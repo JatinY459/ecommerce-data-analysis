@@ -142,12 +142,10 @@ def get_category_map():
         # 🐶 Pet
         'pet_shop': 'Pet',
 
-        # 🚗 Auto
-        'auto': 'Auto',
-
-        # 🏭 Industry / Business
-        'industry_commerce_and_business': 'Industry & Business',
-        'agro_industry_and_commerce': 'Industry & Business',
+        # 🏭 Auto Industry / Business
+        'auto' : 'Auto & Industry',
+        'industry_commerce_and_business': 'Auto & Industry',
+        'agro_industry_and_commerce': 'Auto & Industry',
 
         # 🎶 Entertainment
         'music': 'Arts & Creativity',
