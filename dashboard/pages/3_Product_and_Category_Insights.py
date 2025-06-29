@@ -4,8 +4,9 @@ import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
-from scripts.utils import expander_styles, get_state_code_names, get_region_states
+from scripts.utils import expander_styles, get_state_code_names, get_region_states, get_category_map
 from scripts.data_cleaning import import_data
+from collections import defaultdict
 
 # configuring page
 st.set_page_config(page_title="Product & Category - EDA", page_icon="🛍️", initial_sidebar_state="expanded", layout='wide')
@@ -47,6 +48,10 @@ state_to_region = {
 }
 filtered_customers["customer_region"] = filtered_customers["customer_state"].map(state_to_region)
 
+# mapping tool for product category by group
+category_map = get_category_map()
+filtered_products["product_group_name"] = filtered_products["product_category_name"].map(category_map)
+
 # merged DFs
 customers_orders = filtered_orders.merge(filtered_customers, on="customer_id")
 cust_orders_items = customers_orders.merge(filtered_order_items, on="order_id")
@@ -68,9 +73,13 @@ ship_price_by_region = ship_price_by_region.sort_values(by="avg_shipping_charges
 # for this one:
 products_by_category = filtered_products.groupby("product_category_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
 products_by_category = products_by_category.sort_values(by="products_count", ascending=False)
+products_by_group = filtered_products.groupby("product_group_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
+products_by_group = products_by_group.sort_values(by="products_count", ascending=False)
 
 products_price_by_category = products_order_items.groupby("product_category_name")["price"].mean().reset_index()
 products_price_by_category = products_price_by_category.sort_values(by="price", ascending=False)
+products_price_by_group = products_order_items.groupby("product_group_name")["price"].mean().reset_index()
+products_price_by_group = products_price_by_group.sort_values(by="price", ascending=False)
 
 # dashboard content
 st.title("Product & Category Analysis")
@@ -153,7 +162,7 @@ n = col3.slider(
     f"Select number of categories to display",
     min_value=1,
     max_value=min(35, 69),
-    value=20
+    value=15
 )
 if category_view == "Top N":
     fig = px.bar(
@@ -192,153 +201,169 @@ with st.expander("Top Product Categories Distribution Summary"):
     col3.metric("Categories with < 10 Products", len(products_by_category[products_by_category['products_count'] < 10]))
     col4.metric("Categories with > 100 Products", f"{len(products_by_category[products_by_category['products_count'] > 100])}")
 
+st.divider()
 # st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
-col1, col2 = st.columns(2)
-fig = px.bar(
-    products_price_by_category.head(10),
-    x="product_category_name",
-    y="price",
-    color="product_category_name",
-    title="Category Price Distribution Top Half",
-    text='price',
-    labels={'product_category_name': 'Category', 'price': 'Price'},
-    template="plotly_white"
+col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
+category_view = col2.radio(
+    "Select categories to view",
+    options=["Top N", "Bottom N"],
+    index=0,
+    horizontal=True
 )
-fig.update_traces(textposition='outside')
-fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-col1.plotly_chart(fig)
+n = col3.slider(
+    f"Select number of categories to view",
+    min_value=1,
+    max_value=min(35, 69),
+    value=15
+)
+if category_view == "Top N":
+    fig = px.bar(
+        products_price_by_category.head(n),
+        x="product_category_name",
+        y="price",
+        color="product_category_name",
+        title=f"Category Price Distribution Top {n}",
+        text='price',
+        labels={'product_category_name': 'Category', 'price': 'Price'},
+        template="plotly_white"
+    )
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig)
 
-fig = px.bar(
-    products_price_by_category.tail(10),
-    x="product_category_name",
-    y="price",
-    color="product_category_name",
-    title="Category Price Distribution Bottom Half",
-    text='price',
-    labels={'product_category_name': 'Category', 'price': 'Price'},
-    template="plotly_white"
+if category_view == "Bottom N":
+    fig = px.bar(
+        products_price_by_category.tail(n),
+        x="product_category_name",
+        y="price",
+        color="product_category_name",
+        title=f"Category Price Distribution Bottom {n}",
+        text='price',
+        labels={'product_category_name': 'Category', 'price': 'Price'},
+        template="plotly_white"
+    )
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig)
+
+# fig = px.bar(
+#     products_price_by_category.tail(10),
+#     x="product_category_name",
+#     y="price",
+#     color="product_category_name",
+#     title="Category Price Distribution Bottom Half",
+#     text='price',
+#     labels={'product_category_name': 'Category', 'price': 'Price'},
+#     template="plotly_white"
+# )
+# fig.update_traces(textposition='outside')
+# fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+# col2.plotly_chart(fig)
+
+st.divider()
+
+grouped_categories = defaultdict(list)
+for category, group in category_map.items():
+    grouped_categories[group].append(category)
+
+
+with st.expander("List of Categories in a Group"):
+    for group_name, categories in grouped_categories.items():
+        st.markdown(f"**{group_name}**:")
+        st.write(categories)
+
+col1, col2 = st.columns([1,6])
+col1.markdown("<p style='padding-top:6rem; font-size:1rem;'>Include Toys_Baby Product Group:</p>", unsafe_allow_html=True)
+include_toys = col1.radio(
+    "",
+    options=["Yes", "No"],
+    index=1,
+    horizontal=False
 )
+if include_toys == "No":
+    fig = px.bar(
+        products_by_group.iloc[1:],
+        x="product_group_name",
+        y="products_count",
+        color="product_group_name",
+        title="Products Group Distribution [Excluding Toys_Baby]",
+        text='products_count',
+        labels={'product_group_name': 'Category', 'products_count': 'Number of Products'},
+        template="plotly_white"
+    )
+elif include_toys == "Yes":
+    fig = px.bar(
+        products_by_group,
+        x="product_group_name",
+        y="products_count",
+        color="product_group_name",
+        title="Products Group Distribution [Excluding Toys_Baby]",
+        text='products_count',
+        labels={'product_group_name': 'Product Group', 'products_count': 'Number of Products'},
+        template="plotly_white"
+    )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 col2.plotly_chart(fig)
 
-with st.expander("Region-Wise Order Distribution Summary"):
-    st.markdown("""
-- **Only 3 states cross 5,000 orders**, emphasizing the strong reliance on key regions.
-- 12 states surpass the 1,000 order mark, showing **limited platform reach across Brazil**.
-- Majority of states contribute normally, highlighting opportunity for regional expansion.
-""")
-    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
-    col2.metric("No. of States with > 5k orders", len(customers_by_state[customers_by_state["orders_count"] > 5000]))
-    col3.metric("No. of States with > 1k orders", len(customers_by_state[customers_by_state["orders_count"] > 1000]))
-    col4.metric("States with Least Orders", f"{customers_by_state.iloc[-1]['customer_state']}, {customers_by_state.iloc[-2]['customer_state']}, {customers_by_state.iloc[-3]['customer_state']}")
-
-col1, col2 = st.columns(2)
-col1.plotly_chart(
-    px.bar(
-        cust_orders_delivery_time_by_region,
-        x="customer_region",
-        y="avg_delivery_time",
-        color="customer_region",
-        title="Region-Wise Avg Delivery Time Distribution",
-        text='avg_delivery_time',
-        labels={'customer_region': 'Region', 'avg_delivery_time': 'Average Delivery Time (hrs)'}
-    ).update_traces(textposition='outside').update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-)
-col2.plotly_chart(
-    px.pie(
-        filtered_customers.groupby("customer_city")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"}).sort_values("orders_count", ascending=False).head(10),
-        names="customer_city",
-        values="orders_count",
-        title="Top 10 Cities by Number of Orders",
-        labels={"customer_city": "City", "orders_count": "Number of Orders"},
-        color="customer_city",
-        hole=0.4
-    ).update_traces(textposition='inside', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
-)
-with col1.expander("Avg Delivery Time by Region Summary"):
-    st.markdown("""
-- The **North region has the longest average delivery time at ~15 days**, due to remoteness and logistical challenges.
-- South-East and North-East regions show **faster delivery, averaging around 11 days**.
-- Indicates room to improve service levels and aim for delivery in a week, for key regions.
-""")
-    st.metric("Slowest Delivery Region", f"{cust_orders_delivery_time_by_region.iloc[-1]['customer_region']}, ~{int(cust_orders_delivery_time_by_region['avg_delivery_time'].max()//24)} days")
-
-with col2.expander("Top 10 Cities by Number of Orders Summary"):
-    st.markdown("""
-- The **top 10 cities contribute to ~35% of the total orders**, indicating a strong urban demand.
-- In these economic centres, **São Paulo** leads significantly, followed by **Rio de Janeiro** and **Belo Horizonte**.
-- These cities individually account for thousands of orders, implying high demand & opportunity for betterment in logistics here.
-""")
-    st.metric("Contribution of Top 10 cities in Total Orders", f"{filtered_customers.groupby("customer_city")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"}).sort_values("orders_count", ascending=False).head(10)['orders_count'].sum() / filtered_customers['customer_id'].nunique() * 100:.2f}%")
-
-# st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Shipping Price Patterns by Region & State</h2>""", unsafe_allow_html=True)
 fig = px.bar(
-    ship_price_by_state,
-    x="customer_state",
-    y="avg_shipping_charges",
-    color="customer_state",
-    title="State-Wise Shipping Price Distribution",
-    text='avg_shipping_charges',
-    labels={'customer_state': 'State', 'avg_shipping_charges': 'Average Shipping Price'}
+    products_price_by_group,
+    x="product_group_name",
+    y="price",
+    color="product_group_name",
+    title="Products Avg Price Distribution",
+    text='price',
+    labels={'product_group_name': 'Product Group', 'price': 'Price'},
+    template="plotly_white"
 )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
-with st.expander("Shipping Price Distribution by State Summary"):
-    st.markdown("""
-- Most states show consistent mean shipping price around **42**.
-- North/North-East states exhibit **higher shipping charges**, reflecting logistic challenges.
-- Roraima (RR) shows lowest shipping cost, it is likely a skewed result, as it has only 34 orders.
-""")
-    col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
-    col2.metric("Mean Shipping Price", f"{cust_orders_items['shipping_charges'].mean():.2f}")
-    col3.metric("Highest Mean Shipping Price State", f"{ship_price_by_state.iloc[0]['customer_state']}, {ship_price_by_state['avg_shipping_charges'].max():.2f}")
-    col4.metric("Lowest Mean Shipping Price State", f"{ship_price_by_state.iloc[-1]['customer_state']}, {ship_price_by_state['avg_shipping_charges'].min():.2f}")
-
-col1, col2 = st.columns([1, 1])
-fig = px.bar(
-    ship_price_by_region,
-    x="customer_region",
-    y="avg_shipping_charges",
-    color="customer_region",
-    text='avg_shipping_charges',
-    title="Region-Wise Shipping Price Distribution",
-    labels={'customer_region': 'Region', 'avg_shipping_charges': 'Average Shipping Price'},
-    template="plotly_white",
-    color_discrete_sequence=px.colors.qualitative.Pastel
-)
-fig.update_traces(textposition='outside')
-fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-col1.plotly_chart(fig)
 
 fig = px.box(
-    cust_orders_items,
-    x="customer_region",
-    y="shipping_charges",
-    color="customer_region",
-    title="Shipping-Charges by Region",
-    points="outliers",
-    template="plotly_white"
+    filtered_products,
+    x='product_group_name',
+    y='product_weight_g',
+    points='outliers',
+    color='product_group_name',
+    title=None,
+    labels={
+        'product_group_name': 'Product Group',
+        'product_weight_g': 'Product Weight (g)'
+    },
+    color_discrete_sequence=px.colors.qualitative.Set2
 )
 fig.update_layout(
-    xaxis_title="Customer Region",
-    yaxis_title="Shipping Charges",
+    xaxis_title=None,
+    yaxis_title="Product Weight (grams)",
+    xaxis_tickangle=-45,
+    font=dict(size=13),
     showlegend=False,
-    title_x=0.5,
-    font=dict(size=14)
+    margin=dict(l=30, r=30, t=20, b=80)
 )
-col2.plotly_chart(fig)
+fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
+st.plotly_chart(fig, use_container_width=True)
 
-with col1.expander("Shipping Price Patterns Summary"):
-    st.markdown("""
-- North and North-East regions have the **highest average shipping prices (47, 45)**.
-- South, South-East, and Mid-West are **more cost-efficient (~41-42)**.
-- Highlights potential for cost optimization in remote regions. And opportunity to reduce costs in high volume regions too.
-""")
-with col2.expander("Shipping-Charges by Region Summary"):
-    st.markdown("""
-- Outliers with **very high shipping prices** exist, but are rare compared to total orders.
-- 75% of shipping costs stay below **56 in most regions**, slightly higher (59 & 61) in North/North-East.
-- North shows **highest median shipping price at 39** (in North region), with overall median near 35.
-""")
+fig = px.box(
+    filtered_products,
+    x='product_group_name',
+    y='product_volume_cm3',
+    points='outliers',
+    color='product_group_name',
+    title=None,
+    labels={
+        'product_group_name': 'Product Group',
+        'product_volume_cm3': 'Product Volume (cm^3)'
+    },
+    color_discrete_sequence=px.colors.qualitative.Set2
+)
+fig.update_layout(
+    xaxis_title=None,
+    yaxis_title="Product Volume (cm^3)",
+    xaxis_tickangle=-45,
+    font=dict(size=13),
+    showlegend=False,
+    margin=dict(l=30, r=30, t=20, b=80)
+)
+fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
+st.plotly_chart(fig, use_container_width=True)
