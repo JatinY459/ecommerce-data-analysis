@@ -56,19 +56,7 @@ filtered_products["product_group_name"] = filtered_products["product_category_na
 customers_orders = filtered_orders.merge(filtered_customers, on="customer_id")
 cust_orders_items = customers_orders.merge(filtered_order_items, on="order_id")
 products_order_items = filtered_order_items.merge(filtered_products, on="product_id")
-
-# resources
-customers_by_region = filtered_customers.groupby("customer_region")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"})
-customers_by_region = customers_by_region.sort_values(by="orders_count", ascending=False)
-customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index().rename(columns={'customer_id': 'orders_count'})
-customers_by_state = customers_by_state.sort_values(by="orders_count", ascending=False)
-cust_orders_delivery_time_by_region = customers_orders.groupby("customer_region")["delivery_time_gap_hrs"].mean().reset_index().rename(columns={"delivery_time_gap_hrs": "avg_delivery_time"})
-cust_orders_delivery_time_by_region["avg_delivery_time"] = cust_orders_delivery_time_by_region["avg_delivery_time"].round(2)
-cust_orders_delivery_time_by_region = cust_orders_delivery_time_by_region.sort_values(by="avg_delivery_time")
-ship_price_by_state = cust_orders_items.groupby("customer_state")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
-ship_price_by_state = ship_price_by_state.sort_values(by="avg_shipping_charges", ascending=False)
-ship_price_by_region = cust_orders_items.groupby("customer_region")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
-ship_price_by_region = ship_price_by_region.sort_values(by="avg_shipping_charges", ascending=False)
+products_items_orders = products_order_items.merge(filtered_orders, on="order_id")
 
 # for this one:
 products_by_category = filtered_products.groupby("product_category_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
@@ -80,6 +68,15 @@ products_price_by_category = products_order_items.groupby("product_category_name
 products_price_by_category = products_price_by_category.sort_values(by="price", ascending=False)
 products_price_by_group = products_order_items.groupby("product_group_name")["price"].mean().reset_index()
 products_price_by_group = products_price_by_group.sort_values(by="price", ascending=False)
+
+shipping_price_by_group = products_order_items.groupby("product_group_name")["shipping_charges"].mean().reset_index()
+shipping_price_by_group = shipping_price_by_group.sort_values(by="shipping_charges", ascending=False)
+delivery_time_by_group = products_items_orders.groupby("product_group_name")["delivery_time_gap_hrs"].mean().reset_index()
+delivery_time_by_group = delivery_time_by_group.sort_values(by="delivery_time_gap_hrs", ascending=False)
+product_weight_by_group = filtered_products.groupby("product_group_name")["product_weight_g"].mean().reset_index()
+product_weight_by_group = product_weight_by_group.sort_values(by="product_weight_g", ascending=False)
+product_volume_by_group = filtered_products.groupby("product_group_name")["product_volume_cm3"].mean().reset_index()
+product_volume_by_group = product_volume_by_group.sort_values(by="product_volume_cm3", ascending=False)
 
 # dashboard content
 st.title("Product & Category Analysis")
@@ -147,6 +144,52 @@ with st.expander("Products Categories Top 5 vs Others Summary"):
     col1, col2, col3 = st.columns(3)
     col1.metric("Mean no. of Products [Including Toys]", f"{products_by_category['products_count'].mean():.2f}")
     col2.metric("Mean no. of Products [Excluding Toys]", f"{products_by_category[products_by_category['product_category_name'] !='toys']['products_count'].mean():.2f}")
+
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Product Categories Distribution</h2>
+            Options:""", unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns([1, 3, 3, 1])
+orders_by_products = products_items_orders.groupby("product_category_name")["order_id"].count().reset_index().rename(columns={'order_id':'order_counts'})
+orders_by_products = orders_by_products.sort_values(by="order_counts", ascending=False)
+category_view = col2.radio(
+    "View Categories by:",
+    options=["Top N", "Bottom N"],
+    index=0,
+    horizontal=True
+)
+n = col3.slider(
+    f"Select number of categories to show:",
+    min_value=1,
+    max_value=min(35, 69),
+    value=15
+)
+if category_view == "Top N":
+    fig = px.bar(
+    orders_by_products.iloc[1:n+1],
+    x="product_category_name",
+    y="order_counts",
+    color="product_category_name",
+    title=f"Products Order Count by Categories (Top {n}) [Excluding Toys]",
+    text='order_counts',
+    labels={'product_category_name': 'Product Group', 'order_counts': 'Number of Orders'},
+    template="plotly_white"
+    )
+elif category_view == "Bottom N":
+    fig = px.bar(
+        orders_by_products.iloc[-n:-1],
+        x="product_category_name",
+        y="order_count",
+        color="product_category_name",
+        title=f"Products Order Count by Categories (Bottom {n})",
+        text='order_count',
+        labels={'product_category_name': 'Category', 'order_count': 'Number of Orders'},
+        template="plotly_white"
+    )
+fig.update_traces(textposition='outside')
+fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+st.plotly_chart(fig)
+
+with st.expander("Category Order Volume Summary"):
+    st.markdown("Show Number of Orders for Toys & compare toys % to others")
 
 # category distro
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Product Categories Distribution</h2>
@@ -306,64 +349,181 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 col2.plotly_chart(fig)
 
-fig = px.bar(
-    products_price_by_group,
-    x="product_group_name",
-    y="price",
-    color="product_group_name",
-    title="Products Avg Price Distribution",
-    text='price',
-    labels={'product_group_name': 'Product Group', 'price': 'Price'},
-    template="plotly_white"
+
+selected_quantity = st.selectbox(
+    "Select Quantity to Explore:",
+    options=["price", "shipping price", "delivery time", "weight", "volume"],
+    index=1
 )
+
+if selected_quantity == "price":
+    fig = px.bar(
+        products_price_by_group,
+        x="product_group_name",
+        y="price",
+        color="product_group_name",
+        title="Products Avg Price Distribution by Group",
+        text='price',
+        labels={'product_group_name': 'Product Group', 'price': 'Price'},
+        template="plotly_white"
+    )
+elif selected_quantity == "shipping price":
+    fig = px.bar(
+        shipping_price_by_group,
+        x="product_group_name",
+        y="shipping_charges",
+        color="product_group_name",
+        title="Shipping Price Distribution by Group",
+        text='shipping_charges',
+        labels={'product_group_name': 'Product Group', 'shipping_charges': 'Shipping Price'},
+        template="plotly_white"
+    )
+elif selected_quantity == "delivery time":
+    fig = px.bar(
+        delivery_time_by_group,
+        x="product_group_name",
+        y="delivery_time_gap_hrs",
+        color="product_group_name",
+        title="Delivery Time Distribution by Group",
+        text='delivery_time_gap_hrs',
+        labels={'product_group_name': 'Product Group', 'delivery_time_gap_hrs': 'Delivery Time (hrs)'},
+        template="plotly_white"
+    )
+elif selected_quantity == "weight":
+    fig = px.bar(
+        product_weight_by_group,
+        x="product_group_name",
+        y="product_weight_g",
+        color="product_group_name",
+        title="Product Weight (g) Distribution by Group",
+        text='product_weight_g',
+        labels={'product_group_name': 'Product Group', 'product_weight_g': 'Weight (g)'},
+        template="plotly_white"
+    )
+elif selected_quantity == "volume":
+    fig = px.bar(
+        product_volume_by_group,
+        x="product_group_name",
+        y="product_volume_cm3",
+        color="product_group_name",
+        title="Products Volume Distribution by Group",
+        text='product_volume_cm3',
+        labels={'product_group_name': 'Product Group', 'product_volume_cm3': 'Volume (cm3)'},
+        template="plotly_white"
+    )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 
-fig = px.box(
-    filtered_products,
-    x='product_group_name',
-    y='product_weight_g',
-    points='outliers',
-    color='product_group_name',
-    title=None,
-    labels={
-        'product_group_name': 'Product Group',
-        'product_weight_g': 'Product Weight (g)'
-    },
-    color_discrete_sequence=px.colors.qualitative.Set2
-)
-fig.update_layout(
-    xaxis_title=None,
-    yaxis_title="Product Weight (grams)",
-    xaxis_tickangle=-45,
-    font=dict(size=13),
-    showlegend=False,
-    margin=dict(l=30, r=30, t=20, b=80)
-)
-fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
-st.plotly_chart(fig, use_container_width=True)
-
-fig = px.box(
-    filtered_products,
-    x='product_group_name',
-    y='product_volume_cm3',
-    points='outliers',
-    color='product_group_name',
-    title=None,
-    labels={
-        'product_group_name': 'Product Group',
-        'product_volume_cm3': 'Product Volume (cm^3)'
-    },
-    color_discrete_sequence=px.colors.qualitative.Set2
-)
-fig.update_layout(
-    xaxis_title=None,
-    yaxis_title="Product Volume (cm^3)",
-    xaxis_tickangle=-45,
-    font=dict(size=13),
-    showlegend=False,
-    margin=dict(l=30, r=30, t=20, b=80)
-)
+if selected_quantity == "price":
+    fig = px.box(
+        filtered_products,
+        x='product_group_name',
+        y='price',
+        points='outliers',
+        color='product_group_name',
+        title="Product Price Distribution by Group",
+        labels={
+            'product_group_name': 'Product Group',
+            'price': 'Product Price'
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="Product Price",
+        xaxis_tickangle=-45,
+        font=dict(size=13),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=20, b=80)
+    )
+elif selected_quantity == "shipping price":
+    fig = px.box(
+        products_order_items,
+        x='product_group_name',
+        y='shipping_charges',
+        points='outliers',
+        color='product_group_name',
+        title="Shipping Price Distribution by Group",
+        labels={
+            'product_group_name': 'Product Group',
+            'shipping_charges': 'Shipping Price'
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="Product Shipping Price",
+        xaxis_tickangle=-45,
+        font=dict(size=13),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=20, b=80)
+    )
+elif selected_quantity == "delivery time":
+    fig = px.box(
+        products_items_orders,
+        x='product_group_name',
+        y='delivery_time_gap_hrs',
+        points='outliers',
+        color='product_group_name',
+        title="Delivery Time Distribution By Group",
+        labels={
+            'product_group_name': 'Product Group',
+            'delivery_time_gap_hrs': 'Delivery Time Gap (hrs)'
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="Delivery Time Gap (hrs)",
+        xaxis_tickangle=-45,
+        font=dict(size=13),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=20, b=80)
+    )
+elif selected_quantity == "weight":
+    fig = px.box(
+        filtered_products,
+        x='product_group_name',
+        y='product_weight_g',
+        points='outliers',
+        color='product_group_name',
+        title="Product Weight Distribution by Group",
+        labels={
+            'product_group_name': 'Product Group',
+            'product_weight_g': 'Product Weight (g)'
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="Product Weight (grams)",
+        xaxis_tickangle=-45,
+        font=dict(size=13),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=20, b=80)
+    )
+elif selected_quantity == "volume":
+    fig = px.box(
+        filtered_products,
+        x='product_group_name',
+        y='product_volume_cm3',
+        points='outliers',
+        color='product_group_name',
+        title="Product Volume Distribution By Group",
+        labels={
+            'product_group_name': 'Product Group',
+            'product_volume_cm3': 'Product Volume (cm^3)'
+        },
+        color_discrete_sequence=px.colors.qualitative.Set2
+    )
+    fig.update_layout(
+        xaxis_title=None,
+        yaxis_title="Product Volume (cm^3)",
+        xaxis_tickangle=-45,
+        font=dict(size=13),
+        showlegend=False,
+        margin=dict(l=30, r=30, t=20, b=80)
+    )
 fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
 st.plotly_chart(fig, use_container_width=True)
