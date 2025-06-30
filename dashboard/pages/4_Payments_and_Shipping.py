@@ -58,6 +58,10 @@ customers_orders = filtered_orders.merge(filtered_customers, on="customer_id")
 cust_orders_items = customers_orders.merge(filtered_order_items, on="order_id")
 products_order_items = filtered_order_items.merge(filtered_products, on="product_id")
 products_items_orders = products_order_items.merge(filtered_orders, on="order_id")
+payments_order_items = payments.merge(filtered_order_items, on="order_id")
+payments_orders = payments.merge(filtered_orders, on="order_id")
+payments_items_delivery_time = payments_order_items.merge(orders[['order_id', 'order_delivered_timestamp']], on='order_id', how='left')
+
 
 # for this one:
 products_by_category = filtered_products.groupby("product_category_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
@@ -81,6 +85,11 @@ product_volume_by_group = product_volume_by_group.sort_values(by="product_volume
 
 payments_by_type = filtered_payments.groupby("payment_type")["order_id"].count().reset_index().rename(columns={'order_id': 'payments_count'})
 payments_by_type = payments_by_type.sort_values(by="payments_count", ascending=False)
+
+payments_by_month = payments_orders.groupby(filtered_orders['order_delivered_timestamp'].dt.to_period('M'))['payment_value'].sum().reset_index().rename(columns={'order_delivered_timestamp':'month'})
+payments_by_month['month'] = payments_by_month['month'].dt.strftime('%m-%Y')
+shipping_price_by_month = payments_items_delivery_time.groupby(filtered_orders['order_delivered_timestamp'].dt.to_period('M'))['shipping_charges'].sum().reset_index().rename(columns={'order_delivered_timestamp':'month'})
+shipping_price_by_month['month'] = shipping_price_by_month['month'].dt.strftime('%m-%Y')
 
 no_of_installments = filtered_payments[filtered_payments['payment_type'] == "credit_card"].groupby("payment_installments")["order_id"].count().reset_index().rename(columns={'order_id': 'payments_count'})
 payment_val_by_inst_count = filtered_payments[filtered_payments['payment_type'] == "credit_card"].groupby("payment_installments")["payment_value"].mean().round(2).reset_index()
@@ -256,226 +265,168 @@ fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 col2.plotly_chart(fig)
 
 st.divider()
-
-grouped_categories = defaultdict(list)
-for category, group in category_map.items():
-    grouped_categories[group].append(category)
-
-
-with st.expander("List of Categories in a Group"):
-    for group_name, categories in grouped_categories.items():
-        st.markdown(f"**{group_name}**:")
-        st.write(categories)
-
-col1, col2 = st.columns([1,6])
-col1.markdown("<p style='padding-top:6rem; font-size:1rem;'>Include Toys_Baby Product Group:</p>", unsafe_allow_html=True)
-include_toys = col1.radio(
-    "",
-    options=["Yes", "No"],
-    index=1,
+col1, col2 = st.columns([1, 6])
+col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
+bin_count = col1.slider("Select number of bins:", min_value=5, max_value=50, value=35, step=1)
+selected_quantity = col1.radio(
+    "Choose Quantity to Analyze:",
+    options=["Shipping Charges", "Shipping-to-Price Ratio"],
+    index=0,
     horizontal=False
 )
-if include_toys == "No":
-    fig = px.bar(
-        products_by_group.iloc[1:],
-        x="product_group_name",
-        y="products_count",
-        color="product_group_name",
-        title="Products Group Distribution [Excluding Toys_Baby]",
-        text='products_count',
-        labels={'product_group_name': 'Category', 'products_count': 'Number of Products'},
-        template="plotly_white"
+if selected_quantity == "Shipping Charges":
+    fig = px.histogram(
+        payments_order_items,
+        x="shipping_charges",
+        nbins=bin_count,
+        title="Shipping Price Distribution",
+        template="plotly_white",
+        marginal="box",
+        opacity=0.6,
+        color_discrete_sequence=["#801B52"],
     )
-elif include_toys == "Yes":
-    fig = px.bar(
-        products_by_group,
-        x="product_group_name",
-        y="products_count",
-        color="product_group_name",
-        title="Products Group Distribution [Excluding Toys_Baby]",
-        text='products_count',
-        labels={'product_group_name': 'Product Group', 'products_count': 'Number of Products'},
-        template="plotly_white"
+    fig.update_layout(
+        xaxis_title="Shipping Charges",
+        yaxis_title="Number of Payments",
+        bargap=0.05,
+        title_x=0.5
     )
-fig.update_traces(textposition='outside')
-fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-col2.plotly_chart(fig)
+    fig.update_traces(marker_line_width=1, marker_line_color="white")
+    col2.plotly_chart(fig)
+    with st.expander("Shipping Charges Distribution Summary"):
+        st.markdown("KPIs: mean, quartiles, threshold")
+elif selected_quantity == "Shipping-to-Price Ratio": 
+    fig = px.histogram(
+        payments_order_items,
+        x="shipping_price_ratio",
+        nbins=bin_count,
+        title="Shipping-to-Price Ratio",
+        template="plotly_white",
+        marginal="box",
+        opacity=0.6,
+        color_discrete_sequence=["#47B7B7"],
+    )
+    fig.update_layout(
+        xaxis_title="Shipping-Price Ratio",
+        yaxis_title="Number of Payments",
+        bargap=0.05,
+        title_x=0.5
+    )
+    fig.update_traces(marker_line_width=1, marker_line_color="white")
+    col2.plotly_chart(fig)
+    with st.expander("Shipping-Price Ratio Distribution Summary"):
+        st.markdown("KPIs: mean, quartiles, threshold")
 
 
-selected_quantity = st.selectbox(
-    "Select Quantity to Explore:",
-    options=["price", "shipping price", "delivery time", "weight", "volume"],
-    index=1
+st.divider()
+col1, col2 = st.columns([1, 6])
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Trends in Payments & Shipping</h2>""", unsafe_allow_html=True)
+col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
+bin_count = col1.slider("Select number of bins: ooga booga", min_value=5, max_value=50, value=35, step=1)
+selected_quantity = col1.radio(
+    "Choose Quantity to Analyze:",
+    options=["Payments", "Shipping Charges"],
+    index=0,
+    horizontal=False
 )
+if selected_quantity == "Payments":
+    fig = px.bar(
+        payments_by_month,
+        x='month',
+        y='payment_value',
+        color='month',
+        title="Monthly Trends in Payment Values",
+        text='payment_value',
+        labels={'month': 'Month', 'payment_value': 'Total Payment Value (of the month)'},
+        template="plotly_white"
+    )
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    annotations = [
+        dict(
+            x='12-2017',
+            y=payments_by_month[payments_by_month['month'] == '12-2017']['payment_value'].values[0],
+            text='<b>New Year</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-40,
+            font=dict(size=16)
+        ),
+        dict(
+            x='02-2018',
+            y=payments_by_month[payments_by_month['month'] == '02-2018']['payment_value'].values[0],
+            text='<b>Carnival</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-45,
+            font=dict(size=16)
+        ),
+        dict(
+            x='05-2018',
+            y=payments_by_month[payments_by_month['month'] == '05-2018']['payment_value'].values[0],
+            text='<b>Rainy Season Decline</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-40,
+            font=dict(size=16)
+        )
+    ]
+    fig.update_layout(annotations=annotations)
 
-if selected_quantity == "price":
+    col2.plotly_chart(fig)
+    with st.expander("Total Payment Value Monthly Trends Summary"):
+        st.markdown("""Black Friday Order Volume Increase but revenue not much -> more orders for cheaper items, Increase % Kpi
+                    - Increase at the end imply, rainy season ends & platform performance & usage increase""")
+elif selected_quantity == "Shipping Charges": 
     fig = px.bar(
-        products_price_by_group,
-        x="product_group_name",
-        y="price",
-        color="product_group_name",
-        title="Products Avg Price Distribution by Group",
-        text='price',
-        labels={'product_group_name': 'Product Group', 'price': 'Price'},
-        template="plotly_white"
-    )
-elif selected_quantity == "shipping price":
-    fig = px.bar(
-        shipping_price_by_group,
-        x="product_group_name",
-        y="shipping_charges",
-        color="product_group_name",
-        title="Shipping Price Distribution by Group",
-        text='shipping_charges',
-        labels={'product_group_name': 'Product Group', 'shipping_charges': 'Shipping Price'},
-        template="plotly_white"
-    )
-elif selected_quantity == "delivery time":
-    fig = px.bar(
-        delivery_time_by_group,
-        x="product_group_name",
-        y="delivery_time_gap_hrs",
-        color="product_group_name",
-        title="Delivery Time Distribution by Group",
-        text='delivery_time_gap_hrs',
-        labels={'product_group_name': 'Product Group', 'delivery_time_gap_hrs': 'Delivery Time (hrs)'},
-        template="plotly_white"
-    )
-elif selected_quantity == "weight":
-    fig = px.bar(
-        product_weight_by_group,
-        x="product_group_name",
-        y="product_weight_g",
-        color="product_group_name",
-        title="Product Weight (g) Distribution by Group",
-        text='product_weight_g',
-        labels={'product_group_name': 'Product Group', 'product_weight_g': 'Weight (g)'},
-        template="plotly_white"
-    )
-elif selected_quantity == "volume":
-    fig = px.bar(
-        product_volume_by_group,
-        x="product_group_name",
-        y="product_volume_cm3",
-        color="product_group_name",
-        title="Products Volume Distribution by Group",
-        text='product_volume_cm3',
-        labels={'product_group_name': 'Product Group', 'product_volume_cm3': 'Volume (cm3)'},
-        template="plotly_white"
-    )
-fig.update_traces(textposition='outside')
-fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-st.plotly_chart(fig)
-
-if selected_quantity == "price":
-    fig = px.box(
-        filtered_products,
-        x='product_group_name',
-        y='price',
-        points='outliers',
-        color='product_group_name',
-        title="Product Price Distribution by Group",
-        labels={
-            'product_group_name': 'Product Group',
-            'price': 'Product Price'
-        },
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    fig.update_layout(
-        xaxis_title=None,
-        yaxis_title="Product Price",
-        xaxis_tickangle=-45,
-        font=dict(size=13),
-        showlegend=False,
-        margin=dict(l=30, r=30, t=20, b=80)
-    )
-elif selected_quantity == "shipping price":
-    fig = px.box(
-        products_order_items,
-        x='product_group_name',
+        shipping_price_by_month,
+        x='month',
         y='shipping_charges',
-        points='outliers',
-        color='product_group_name',
-        title="Shipping Price Distribution by Group",
-        labels={
-            'product_group_name': 'Product Group',
-            'shipping_charges': 'Shipping Price'
-        },
-        color_discrete_sequence=px.colors.qualitative.Set2
+        color='month',
+        title="Monthly Trends in Shipping Charges",
+        text='shipping_charges',
+        labels={'month': 'Month', 'shipping_charges': 'Total Shipping Charges (in the month)'},
+        template="plotly_white"
     )
-    fig.update_layout(
-        xaxis_title=None,
-        yaxis_title="Product Shipping Price",
-        xaxis_tickangle=-45,
-        font=dict(size=13),
-        showlegend=False,
-        margin=dict(l=30, r=30, t=20, b=80)
-    )
-elif selected_quantity == "delivery time":
-    fig = px.box(
-        products_items_orders,
-        x='product_group_name',
-        y='delivery_time_gap_hrs',
-        points='outliers',
-        color='product_group_name',
-        title="Delivery Time Distribution By Group",
-        labels={
-            'product_group_name': 'Product Group',
-            'delivery_time_gap_hrs': 'Delivery Time Gap (hrs)'
-        },
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    fig.update_layout(
-        xaxis_title=None,
-        yaxis_title="Delivery Time Gap (hrs)",
-        xaxis_tickangle=-45,
-        font=dict(size=13),
-        showlegend=False,
-        margin=dict(l=30, r=30, t=20, b=80)
-    )
-elif selected_quantity == "weight":
-    fig = px.box(
-        filtered_products,
-        x='product_group_name',
-        y='product_weight_g',
-        points='outliers',
-        color='product_group_name',
-        title="Product Weight Distribution by Group",
-        labels={
-            'product_group_name': 'Product Group',
-            'product_weight_g': 'Product Weight (g)'
-        },
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    fig.update_layout(
-        xaxis_title=None,
-        yaxis_title="Product Weight (grams)",
-        xaxis_tickangle=-45,
-        font=dict(size=13),
-        showlegend=False,
-        margin=dict(l=30, r=30, t=20, b=80)
-    )
-elif selected_quantity == "volume":
-    fig = px.box(
-        filtered_products,
-        x='product_group_name',
-        y='product_volume_cm3',
-        points='outliers',
-        color='product_group_name',
-        title="Product Volume Distribution By Group",
-        labels={
-            'product_group_name': 'Product Group',
-            'product_volume_cm3': 'Product Volume (cm^3)'
-        },
-        color_discrete_sequence=px.colors.qualitative.Set2
-    )
-    fig.update_layout(
-        xaxis_title=None,
-        yaxis_title="Product Volume (cm^3)",
-        xaxis_tickangle=-45,
-        font=dict(size=13),
-        showlegend=False,
-        margin=dict(l=30, r=30, t=20, b=80)
-    )
-fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
-st.plotly_chart(fig, use_container_width=True)
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    annotations = [
+        dict(
+            x='12-2017',
+            y=shipping_price_by_month[shipping_price_by_month['month'] == '12-2017']['shipping_charges'].values[0],
+            text='<b>New Year</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-40,
+            font=dict(size=16)
+        ),
+        dict(
+            x='02-2018',
+            y=shipping_price_by_month[shipping_price_by_month['month'] == '02-2018']['shipping_charges'].values[0],
+            text='<b>Carnival</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-45,
+            font=dict(size=16)
+        ),
+        dict(
+            x='05-2018',
+            y=shipping_price_by_month[shipping_price_by_month['month'] == '05-2018']['shipping_charges'].values[0],
+            text='<b>Rainy Season Decline</b>',
+            showarrow=True,
+            arrowhead=1,
+            ax=0,
+            ay=-40,
+            font=dict(size=16)
+        )
+    ]
+    fig.update_layout(annotations=annotations)
+    col2.plotly_chart(fig)
+    with st.expander("Shipping Charges Monthly Trends Summary"):
+        st.markdown("Peak at New year, low in carnival likely cuz the carnival is largely celebrated in areas like Sao Paulo & Rio de janeiro & charges there are less due to less distance & better logistics,")
+
