@@ -95,6 +95,15 @@ no_of_installments = filtered_payments[filtered_payments['payment_type'] == "cre
 payment_val_by_inst_count = filtered_payments[filtered_payments['payment_type'] == "credit_card"].groupby("payment_installments")["payment_value"].mean().round(2).reset_index()
 payment_val_by_inst_count = payment_val_by_inst_count.sort_values(by="payment_value", ascending=False)
 
+
+orders_by_sellers = filtered_order_items.groupby("seller_id")["order_id"].count().reset_index().rename(columns={'order_id':'orders_count'})
+orders_by_sellers = orders_by_sellers.sort_values(by="orders_count", ascending=False)
+products_by_sellers = filtered_order_items.groupby("seller_id")["product_id"].nunique().reset_index().rename(columns={'product_id':'products_count'})
+products_by_sellers = products_by_sellers.sort_values(by="products_count", ascending=False)
+
+revenue_by_sellers = payments_order_items.groupby("seller_id")["payment_value"].sum().reset_index()
+revenue_by_sellers = revenue_by_sellers.sort_values(by="payment_value", ascending=False)
+
 # dashboard content
 st.title("Payments & Shipping Analysis")
 st.markdown("""
@@ -104,92 +113,100 @@ We analyze how products are spread across sellers, identify high performers, and
 """, unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
 col1.metric("Number of Unique Sellers", f"{filtered_order_items["seller_id"].nunique():,}")
-col2.metric("Avg Products per Seller", f"{filtered_order_items.groupby("seller_id")["product_id"].nunique().mean():.2f}")
+col2.metric("Avg Products per Seller", f"{products_by_sellers["products_count"].mean():.2f}")
 col3.metric("Avg Number of Orders per Seller", f"{filtered_order_items.groupby("seller_id")["order_id"].count().mean():.2f}")
 
-col1, col2 = st.columns(2)
+st.divider()
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Order Volume & Revenue by Sellers</h2>""", unsafe_allow_html=True)
+col1, col2, col3, col4, col5 = st.columns([1, 4, 1, 3, 1])
+n = col2.slider(
+    f"Select Number of Top Sellers to show:",
+    min_value=1,
+    max_value=50,
+    value=20,
+)
+selected_quantity = col4.selectbox(
+    "Quantity to compare by Sellers:",
+    options=["Number of Orders", "Total Revenue"],
+    index=0
+)
 
+if selected_quantity == "Number of Orders":
+    col1, col2 = st.columns(2)
+    fig = px.bar(
+        orders_by_sellers.head(n),
+        x='seller_id',
+        y='orders_count',
+        color='seller_id',
+        title=f"Number of Orders by Sellers (Top {n})",
+        text='orders_count',
+        labels={'seller_id': 'Sellers', 'orders_count': 'Number of Orders'},
+        template="plotly_white"
+    )
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig)
+
+    with st.expander("Top Sellers Performance by Order Volume Summary"):
+        st.markdown("""- Some top sellers (brands and commercial) do dominate & top 10 contribute to 13.6% of total orders.
+                    - Dependent but not super dependent on top sellers, as most sellers do get less than 100/200 orders.
+                    - Fix this later.""")
+        col1, col2, col3 = st.columns(3)
+        col1.metric(f"Top {n} Sellers Contribution in Total", f"{(orders_by_sellers.head(n)["orders_count"].sum()/orders_by_sellers["orders_count"].sum()) * 100:.2f} %")
+        col2.metric("No. of Sellers with >100 orders", f"{orders_by_sellers[orders_by_sellers['orders_count'] > 100]["seller_id"].nunique()}")
+        col3.metric("No. of Sellers with <= 10 orders", f"{orders_by_sellers[orders_by_sellers['orders_count'] <= 10]["seller_id"].nunique()}")
+
+elif selected_quantity == "Total Revenue":
+    col1, col2 = st.columns(2)
+    fig = px.bar(
+        revenue_by_sellers.head(n),
+        x='seller_id',
+        y='payment_value',
+        color='seller_id',
+        title=f"Total Revenue by Sellers (Top {n})",
+        text='payment_value',
+        labels={'seller_id': 'Sellers', 'payment_value': 'Total Seller Revenue'},
+        template="plotly_white"
+    )
+    fig.update_traces(textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    st.plotly_chart(fig)
+
+    with st.expander("Top Sellers Performance by Revenue Summary"):
+        st.markdown("""- Some top sellers (brands and commercial) do dominate & top 10 contribute to 13.6% of total orders.
+                    - Dependent but not super dependent on top sellers, as most sellers do get less than 100/200 orders.
+                    - Fix this later.""")
+        col1, col2, col3 = st.columns(3)
+        col1.metric(f"Top {n} Sellers Contribution in Total", f"{(revenue_by_sellers.head(n)["payment_value"].sum()/revenue_by_sellers["payment_value"].sum()) * 100:.2f} %")
+        col2.metric(f"No. of Sellers in both Top {n} list", len(set(orders_by_sellers.head(n)["seller_id"]) & set(revenue_by_sellers.head(n)["seller_id"])))
+        col3.metric("No. of Sellers with <= 10 orders", f"{revenue_by_sellers[revenue_by_sellers['payment_value'] <= 10]["seller_id"].nunique()}")
+
+st.divider()
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Products Volume Distribution by Sellers</h2>
+            """, unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns([2, 4, 3, 1])
+n = col2.slider(
+    "Select the number of sellers to show:",
+    min_value=10,
+    max_value=50,
+    value=20
+)
 fig = px.bar(
-    payments_by_type,
-    x='payment_type',
-    y='payments_count',
-    color='payment_type',
-    title="Number of Payments by Payment Mode",
-    text='payments_count',
-    labels={'payment_type': 'Payment Mode', 'payments_count': 'Number of Payments'},
+    products_by_sellers.head(n),
+    x="seller_id",
+    y="products_count",
+    color="seller_id",
+    title=f"Top {n} Sellers by Unique Products",
+    text='products_count',
+    labels={'seller_id': 'Seller', 'products_count': 'Number of Unique Products'},
     template="plotly_white"
 )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-col1.plotly_chart(fig)
+st.plotly_chart(fig)
+with st.expander(f"Top {n} Sellers by Unique Products Summary"):
+    st.markdown("Some stuff bout it")
 
-fig = px.pie(
-    payments_by_type,
-    names='payment_type',
-    values='payments_count',
-    title='Payment Mode Distribution',
-    labels={'payment_type': 'Payment Mode', 'payments_count': 'Number of Payments'},
-    hole=0.4,
-    color_discrete_sequence=px.colors.qualitative.Pastel
-)
-fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate="<b>%{label}</b><br>Count: %{value}<br>Percentage: %{percent}")
-col2.plotly_chart(fig)
-
-with st.expander("Payments Distribution by Type/Mode Summary"):
-    st.markdown("""Write the summaries & Metrics/KPIs here""")
-    
-st.divider()
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Installment Count Distribution in Credit Card Payments</h2>
-            """, unsafe_allow_html=True)
-col1, col2, col3, col4, col5 = st.columns([1, 4, 1, 3, 1])
-n = col2.slider(
-    f"Select the range of Installment Counts to show:",
-    min_value=1,
-    max_value=no_of_installments['payment_installments'].unique().max(),
-    value=(1,no_of_installments['payment_installments'].unique().max()),
-)
-selected_quantity = col4.selectbox(
-    "Quantity to compare by Installment Count:",
-    options=["Number of Payments", "Payment Value"],
-    index=0
-)
-if selected_quantity == "Number of Payments":
-    fig = px.bar(
-        no_of_installments[no_of_installments["payment_installments"].between(n[0], n[1])],
-        x="payment_installments",
-        y="payments_count",
-        color="payments_count",
-        title="Number of Installments in Credit-Card Payments",
-        text='payments_count',
-        labels={'payment_installments': 'Number of Installments', 'payments_count': 'Number of Payments'},
-        template="plotly_white",
-        color_continuous_scale=px.colors.sequential.Magenta
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    st.plotly_chart(fig)
-    with st.expander("Payments Volume by Installment Count Summary"):
-        st.markdown("Kpis: certain number of installments have hikes user friendly numbers, we dont offer installments over 24 months, over 12 installments rarely used.")
-elif selected_quantity == "Payment Value":
-    fig = px.bar(
-        payment_val_by_inst_count[payment_val_by_inst_count["payment_installments"].between(n[0], n[1])],
-        x="payment_installments",
-        y="payment_value",
-        color="payment_value",
-        title="Payment Value in Credit Card Payments by Installments Count",
-        text='payment_value',
-        labels={'payment_installments': 'Number of Installments', 'payment_value': 'Mean Payment Value'},
-        template="plotly_white",
-        color_continuous_scale=px.colors.sequential.Magenta
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    st.plotly_chart(fig)
-    with st.expander("Payment Value by Installments Count Summary"):
-        st.markdown("""Kpis: certain number of installments have hikes user friendly numbers, don't offer installemtns over 24 months.
-                    -  peaks are skewed as there are only 1 order for each 22 & 23 installment count, implying, these peaks are skewed.
-                    -  in the first 12 installments, avg paymetn value is similar but increase slightly, as they are preferred, in general.
-                    - The 24 installment count has high payment value with significant number of orders suggesting, it is preferred for high payment value.""")
 
 st.divider()
 
