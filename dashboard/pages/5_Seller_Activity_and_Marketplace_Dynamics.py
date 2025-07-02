@@ -95,17 +95,23 @@ no_of_installments = filtered_payments[filtered_payments['payment_type'] == "cre
 payment_val_by_inst_count = filtered_payments[filtered_payments['payment_type'] == "credit_card"].groupby("payment_installments")["payment_value"].mean().round(2).reset_index()
 payment_val_by_inst_count = payment_val_by_inst_count.sort_values(by="payment_value", ascending=False)
 
+orders_by_products = products_items_orders.groupby("product_id")["order_id"].count().reset_index().rename(columns={'order_id':'orders_count'})
+orders_by_products = orders_by_products.sort_values(by="orders_count", ascending=False)
 
 orders_by_sellers = filtered_order_items.groupby("seller_id")["order_id"].count().reset_index().rename(columns={'order_id':'orders_count'})
 orders_by_sellers = orders_by_sellers.sort_values(by="orders_count", ascending=False)
 products_by_sellers = filtered_order_items.groupby("seller_id")["product_id"].nunique().reset_index().rename(columns={'product_id':'products_count'})
 products_by_sellers = products_by_sellers.sort_values(by="products_count", ascending=False)
+sellers_by_products = filtered_order_items.groupby("product_id")["seller_id"].nunique().reset_index().rename(columns={'seller_id':'sellers_count'}).sort_values(by="sellers_count", ascending=False)
+products_by_seller_count = sellers_by_products.groupby("sellers_count")["product_id"].count().reset_index().sort_values(by="product_id", ascending=False)
 
 revenue_by_sellers = payments_order_items.groupby("seller_id")["payment_value"].sum().reset_index()
 revenue_by_sellers = revenue_by_sellers.sort_values(by="payment_value", ascending=False)
 
+sellers_by_categories = products_order_items.groupby("product_category_name")["seller_id"].nunique().reset_index().rename(columns={'seller_id':'sellers_count'}).sort_values(by="sellers_count",ascending=False)
+
 # dashboard content
-st.title("Payments & Shipping Analysis")
+st.title("Seller Activity & Marketplace Analysis")
 st.markdown("""
 This section explores how sellers contribute to the platform – their volume, diversity, and dominance.
 We analyze how products are spread across sellers, identify high performers, and highlight market balance or concentration.
@@ -179,7 +185,7 @@ elif selected_quantity == "Total Revenue":
         col1, col2, col3 = st.columns(3)
         col1.metric(f"Top {n} Sellers Contribution in Total", f"{(revenue_by_sellers.head(n)["payment_value"].sum()/revenue_by_sellers["payment_value"].sum()) * 100:.2f} %")
         col2.metric(f"No. of Sellers in both Top {n} list", len(set(orders_by_sellers.head(n)["seller_id"]) & set(revenue_by_sellers.head(n)["seller_id"])))
-        col3.metric("No. of Sellers with <= 10 orders", f"{revenue_by_sellers[revenue_by_sellers['payment_value'] <= 10]["seller_id"].nunique()}")
+        col3.metric("No. of Sellers with <= 1M Revenue", f"{revenue_by_sellers[revenue_by_sellers['payment_value'] <= 1000000]["seller_id"].nunique()}")
 
 st.divider()
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Products Volume Distribution by Sellers</h2>
@@ -206,236 +212,47 @@ fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 with st.expander(f"Top {n} Sellers by Unique Products Summary"):
     st.markdown("Some stuff bout it")
-
+    col1, col2, col3 = st.columns(3)
+    col1.metric("No. of Specialist Sellers [<10 products]", products_by_sellers[products_by_sellers["products_count"] < 10]["seller_id"].nunique())
+    col2.metric("No. of Generalist Sellers [>50 products]", products_by_sellers[products_by_sellers["products_count"] > 50]["seller_id"].nunique())
+    col3.metric("Revenue Ratio (Generalists/Specialists)", f"{revenue_by_sellers[revenue_by_sellers["seller_id"].isin(products_by_sellers[products_by_sellers["products_count"] > 50]["seller_id"])]["payment_value"].mean() / revenue_by_sellers[revenue_by_sellers["seller_id"].isin(products_by_sellers[products_by_sellers["products_count"] < 10]["seller_id"])]["payment_value"].mean():.2f}")
 
 st.divider()
 
-# st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Bar Plot for State-wise Order Distribution</h2>""", unsafe_allow_html=True)
-# col1, col2, col3 = st.columns([1, 2, 1])
-col1, col2 = st.columns([1, 6])
-col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
-bin_count = col1.slider("Number of bins:", min_value=5, max_value=50, value=35, step=1)
-fig = px.histogram(
-    filtered_payments,
-    x=filtered_payments['payment_value'],
-    nbins=bin_count,
-    title="Payment Value Distribution",
-    template="plotly_white",
-    marginal="box",
-    opacity=0.6,
-    color_discrete_sequence=["#C363FA"],
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Sellers for Unique Product Distribution</h2>
+            """, unsafe_allow_html=True)
+col1, col2, col3, col4 = st.columns([2, 4, 3, 1])
+n = col2.slider(
+    "Select the number of products to show:",
+    min_value=10,
+    max_value=50,
+    value=20
 )
-fig.update_layout(
-    xaxis_title="Payment Value",
-    yaxis_title="Number of Payments",
-    bargap=0.05,
-    title_x=0.5
-)
-fig.update_traces(marker_line_width=1, marker_line_color="white")
-col2.plotly_chart(fig)
-
-col1, col2 = st.columns([5,3])
-fig = px.box(
-    filtered_payments,
-    x='payment_type',
-    y='payment_value',
-    points='outliers',
-    color='payment_type',
-    title="Payment Value Distribution by Payment Mode",
-    labels={
-        'payment_type': 'Payment Mode',
-        'payment_value': 'Payment Value'
-    },
-    color_discrete_sequence=px.colors.qualitative.Set2
-)
-fig.update_layout(
-    xaxis_title=None,
-    yaxis_title="Payment Value",
-    xaxis_tickangle=-45,
-    font=dict(size=13),
-    showlegend=False,
-    margin=dict(l=30, r=30, t=20, b=80)
-)
-fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='lightgrey')
-col1.plotly_chart(fig)
-
 fig = px.bar(
-    filtered_payments.groupby("payment_type")["payment_value"].mean().round(2).reset_index().sort_values(by="payment_value", ascending=False),
-    x="payment_type",
-    y="payment_value",
-    color="payment_type",
-    title="Avg Payment Value by Payment Mode",
-    text='payment_value',
-    labels={'payment_type': 'Number of Installments', 'payment_value': 'Mean Payment Value'},
+    products_by_seller_count[products_by_seller_count["sellers_count"] > 1],
+    y="product_id",
+    x="sellers_count",
+    color="sellers_count",
+    title=f"Top {n} Products by Unique Sellers",
+    text='sellers_count',
+    labels={'product_id': 'Product', 'sellers_count': 'Number of Unique Sellers'},
     template="plotly_white"
 )
 fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-col2.plotly_chart(fig)
-
+st.plotly_chart(fig)
+with st.expander(f"Top {n} Products by Unique Sellers Summary"):
+    st.markdown("Some stuff bout it")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("No. of Products sold by > 1 sellers", f"{len(sellers_by_products[sellers_by_products["sellers_count"] > 1])} ({len(sellers_by_products[sellers_by_products["sellers_count"] > 1])/len(sellers_by_products)*100:.2f} %)")
+    col2.metric("Products sold by > 3 Sellers", f"{len(sellers_by_products[sellers_by_products["sellers_count"] > 3])}")
+    col3.metric("Orders for Multi-Sellers Products", f"{orders_by_products[orders_by_products["product_id"].isin(sellers_by_products[sellers_by_products["sellers_count"] > 1]["product_id"])]["orders_count"].sum()} ({orders_by_products[orders_by_products["product_id"].isin(sellers_by_products[sellers_by_products["sellers_count"] > 1]["product_id"])]["orders_count"].sum()/len(filtered_orders) * 100:.2f} %)")
 st.divider()
-col1, col2 = st.columns([1, 6])
-col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
-bin_count = col1.slider("Select number of bins:", min_value=5, max_value=50, value=35, step=1)
-selected_quantity = col1.radio(
-    "Choose Quantity to Analyze:",
-    options=["Shipping Charges", "Shipping-to-Price Ratio"],
-    index=0,
-    horizontal=False
-)
-if selected_quantity == "Shipping Charges":
-    fig = px.histogram(
-        payments_order_items,
-        x="shipping_charges",
-        nbins=bin_count,
-        title="Shipping Price Distribution",
-        template="plotly_white",
-        marginal="box",
-        opacity=0.6,
-        color_discrete_sequence=["#801B52"],
-    )
-    fig.update_layout(
-        xaxis_title="Shipping Charges",
-        yaxis_title="Number of Payments",
-        bargap=0.05,
-        title_x=0.5
-    )
-    fig.update_traces(marker_line_width=1, marker_line_color="white")
-    col2.plotly_chart(fig)
-    with st.expander("Shipping Charges Distribution Summary"):
-        st.markdown("KPIs: mean, quartiles, threshold")
-elif selected_quantity == "Shipping-to-Price Ratio": 
-    fig = px.histogram(
-        payments_order_items,
-        x="shipping_price_ratio",
-        nbins=bin_count,
-        title="Shipping-to-Price Ratio",
-        template="plotly_white",
-        marginal="box",
-        opacity=0.6,
-        color_discrete_sequence=["#47B7B7"],
-    )
-    fig.update_layout(
-        xaxis_title="Shipping-Price Ratio",
-        yaxis_title="Number of Payments",
-        bargap=0.05,
-        title_x=0.5
-    )
-    fig.update_traces(marker_line_width=1, marker_line_color="white")
-    col2.plotly_chart(fig)
-    with st.expander("Shipping-Price Ratio Distribution Summary"):
-        st.markdown("KPIs: mean, quartiles, threshold")
 
-
-st.divider()
-col1, col2 = st.columns([1, 6])
-st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Trends in Payments & Shipping</h2>""", unsafe_allow_html=True)
-col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
-bin_count = col1.slider("Select number of bins: ooga booga", min_value=5, max_value=50, value=35, step=1)
-selected_quantity = col1.radio(
-    "Choose Quantity to Analyze:",
-    options=["Payments", "Shipping Charges"],
-    index=0,
-    horizontal=False
-)
-if selected_quantity == "Payments":
-    fig = px.bar(
-        payments_by_month,
-        x='month',
-        y='payment_value',
-        color='month',
-        title="Monthly Trends in Payment Values",
-        text='payment_value',
-        labels={'month': 'Month', 'payment_value': 'Total Payment Value (of the month)'},
-        template="plotly_white"
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    annotations = [
-        dict(
-            x='12-2017',
-            y=payments_by_month[payments_by_month['month'] == '12-2017']['payment_value'].values[0],
-            text='<b>New Year</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-40,
-            font=dict(size=16)
-        ),
-        dict(
-            x='02-2018',
-            y=payments_by_month[payments_by_month['month'] == '02-2018']['payment_value'].values[0],
-            text='<b>Carnival</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-45,
-            font=dict(size=16)
-        ),
-        dict(
-            x='05-2018',
-            y=payments_by_month[payments_by_month['month'] == '05-2018']['payment_value'].values[0],
-            text='<b>Rainy Season Decline</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-40,
-            font=dict(size=16)
-        )
-    ]
-    fig.update_layout(annotations=annotations)
-
-    col2.plotly_chart(fig)
-    with st.expander("Total Payment Value Monthly Trends Summary"):
-        st.markdown("""Black Friday Order Volume Increase but revenue not much -> more orders for cheaper items, Increase % Kpi
-                    - Increase at the end imply, rainy season ends & platform performance & usage increase""")
-elif selected_quantity == "Shipping Charges": 
-    fig = px.bar(
-        shipping_price_by_month,
-        x='month',
-        y='shipping_charges',
-        color='month',
-        title="Monthly Trends in Shipping Charges",
-        text='shipping_charges',
-        labels={'month': 'Month', 'shipping_charges': 'Total Shipping Charges (in the month)'},
-        template="plotly_white"
-    )
-    fig.update_traces(textposition='outside')
-    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
-    annotations = [
-        dict(
-            x='12-2017',
-            y=shipping_price_by_month[shipping_price_by_month['month'] == '12-2017']['shipping_charges'].values[0],
-            text='<b>New Year</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-40,
-            font=dict(size=16)
-        ),
-        dict(
-            x='02-2018',
-            y=shipping_price_by_month[shipping_price_by_month['month'] == '02-2018']['shipping_charges'].values[0],
-            text='<b>Carnival</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-45,
-            font=dict(size=16)
-        ),
-        dict(
-            x='05-2018',
-            y=shipping_price_by_month[shipping_price_by_month['month'] == '05-2018']['shipping_charges'].values[0],
-            text='<b>Rainy Season Decline</b>',
-            showarrow=True,
-            arrowhead=1,
-            ax=0,
-            ay=-40,
-            font=dict(size=16)
-        )
-    ]
-    fig.update_layout(annotations=annotations)
-    col2.plotly_chart(fig)
-    with st.expander("Shipping Charges Monthly Trends Summary"):
-        st.markdown("Peak at New year, low in carnival likely cuz the carnival is largely celebrated in areas like Sao Paulo & Rio de janeiro & charges there are less due to less distance & better logistics,")
-
+st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Unique Sellers by Category:</h2>
+            <p style="height:1.2rem;"></p>
+            """, unsafe_allow_html=True)
+col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
+col2.metric("No of Sellers in 'toys' Category", f"{sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]} ({sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]/filtered_order_items["seller_id"].nunique() * 100 :.2f}%)")
+col3.metric("Avg No of Sellers in a Category", f"{sellers_by_categories["sellers_count"].mean():.2f}")
+col4.metric("Avg No of Sellers in a category [excluding toys]", f"{sellers_by_categories[sellers_by_categories["product_category_name"] != 'toys']["sellers_count"].mean():.2f}")
