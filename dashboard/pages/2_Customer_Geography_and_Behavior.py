@@ -48,17 +48,28 @@ customers_orders = filtered_orders.merge(filtered_customers, on="customer_id")
 cust_orders_items = customers_orders.merge(order_items, on="order_id")
 
 # resources
-customers_by_region = filtered_customers.groupby("customer_region")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"})
-customers_by_region = customers_by_region.sort_values(by="orders_count", ascending=False)
-customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index().rename(columns={'customer_id': 'orders_count'})
-customers_by_state = customers_by_state.sort_values(by="orders_count", ascending=False)
-cust_orders_delivery_time_by_region = customers_orders.groupby("customer_region")["delivery_time_gap_hrs"].mean().reset_index().rename(columns={"delivery_time_gap_hrs": "avg_delivery_time"})
-cust_orders_delivery_time_by_region["avg_delivery_time"] = cust_orders_delivery_time_by_region["avg_delivery_time"].round(2)
-cust_orders_delivery_time_by_region = cust_orders_delivery_time_by_region.sort_values(by="avg_delivery_time")
-ship_price_by_state = cust_orders_items.groupby("customer_state")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
-ship_price_by_state = ship_price_by_state.sort_values(by="avg_shipping_charges", ascending=False)
-ship_price_by_region = cust_orders_items.groupby("customer_region")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
-ship_price_by_region = ship_price_by_region.sort_values(by="avg_shipping_charges", ascending=False)
+@st.cache_data
+def compute_plotting_dfs():
+    customers_by_region = filtered_customers.groupby("customer_region")["customer_id"].nunique().reset_index().rename(columns={"customer_id": "orders_count"})
+    customers_by_region = customers_by_region.sort_values(by="orders_count", ascending=False)
+    customers_by_state = filtered_customers.groupby('customer_state')['customer_id'].nunique().reset_index().rename(columns={'customer_id': 'orders_count'})
+    customers_by_state = customers_by_state.sort_values(by="orders_count", ascending=False)
+    cust_orders_delivery_time_by_region = customers_orders.groupby("customer_region")["delivery_time_gap_hrs"].mean().reset_index().rename(columns={"delivery_time_gap_hrs": "avg_delivery_time"})
+    cust_orders_delivery_time_by_region["avg_delivery_time"] = cust_orders_delivery_time_by_region["avg_delivery_time"].round(2)
+    cust_orders_delivery_time_by_region = cust_orders_delivery_time_by_region.sort_values(by="avg_delivery_time")
+    ship_price_by_state = cust_orders_items.groupby("customer_state")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
+    ship_price_by_state = ship_price_by_state.sort_values(by="avg_shipping_charges", ascending=False)
+    ship_price_by_region = cust_orders_items.groupby("customer_region")["shipping_charges"].mean().reset_index().rename(columns={"shipping_charges": "avg_shipping_charges"})
+    ship_price_by_region = ship_price_by_region.sort_values(by="avg_shipping_charges", ascending=False)
+
+    return (customers_by_region, customers_by_state, cust_orders_delivery_time_by_region, ship_price_by_state, ship_price_by_region)
+
+(customers_by_region, 
+ customers_by_state, 
+ cust_orders_delivery_time_by_region, 
+ ship_price_by_state, 
+ ship_price_by_region) = compute_plotting_dfs()
+
 
 # dashboard content
 st.title("Customer Geography and Behavior Analysis")

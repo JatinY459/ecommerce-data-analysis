@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 
-
+@st.cache_data
 def import_data(dashboard=False):
     if dashboard:
             date_cols = ["order_purchase_timestamp", "order_approved_at", "order_delivered_timestamp", "order_estimated_delivery_date"]

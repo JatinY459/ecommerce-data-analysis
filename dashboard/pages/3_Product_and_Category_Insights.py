@@ -59,24 +59,38 @@ products_order_items = filtered_order_items.merge(filtered_products, on="product
 products_items_orders = products_order_items.merge(filtered_orders, on="order_id")
 
 # for this one:
-products_by_category = filtered_products.groupby("product_category_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
-products_by_category = products_by_category.sort_values(by="products_count", ascending=False)
-products_by_group = filtered_products.groupby("product_group_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
-products_by_group = products_by_group.sort_values(by="products_count", ascending=False)
+@st.cache_data
+def compute_plotting_dfs():
+    products_by_category = filtered_products.groupby("product_category_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
+    products_by_category = products_by_category.sort_values(by="products_count", ascending=False)
+    products_by_group = filtered_products.groupby("product_group_name")["product_id"].nunique().reset_index().rename(columns={"product_id": "products_count"})
+    products_by_group = products_by_group.sort_values(by="products_count", ascending=False)
 
-products_price_by_category = products_order_items.groupby("product_category_name")["price"].mean().reset_index()
-products_price_by_category = products_price_by_category.sort_values(by="price", ascending=False)
-products_price_by_group = products_order_items.groupby("product_group_name")["price"].mean().reset_index()
-products_price_by_group = products_price_by_group.sort_values(by="price", ascending=False)
+    products_price_by_category = products_order_items.groupby("product_category_name")["price"].mean().reset_index()
+    products_price_by_category = products_price_by_category.sort_values(by="price", ascending=False)
+    products_price_by_group = products_order_items.groupby("product_group_name")["price"].mean().reset_index()
+    products_price_by_group = products_price_by_group.sort_values(by="price", ascending=False)
 
-shipping_price_by_group = products_order_items.groupby("product_group_name")["shipping_charges"].mean().reset_index()
-shipping_price_by_group = shipping_price_by_group.sort_values(by="shipping_charges", ascending=False)
-delivery_time_by_group = products_items_orders.groupby("product_group_name")["delivery_time_gap_hrs"].mean().reset_index()
-delivery_time_by_group = delivery_time_by_group.sort_values(by="delivery_time_gap_hrs", ascending=False)
-product_weight_by_group = filtered_products.groupby("product_group_name")["product_weight_g"].mean().reset_index()
-product_weight_by_group = product_weight_by_group.sort_values(by="product_weight_g", ascending=False)
-product_volume_by_group = filtered_products.groupby("product_group_name")["product_volume_cm3"].mean().reset_index()
-product_volume_by_group = product_volume_by_group.sort_values(by="product_volume_cm3", ascending=False)
+    shipping_price_by_group = products_order_items.groupby("product_group_name")["shipping_charges"].mean().reset_index()
+    shipping_price_by_group = shipping_price_by_group.sort_values(by="shipping_charges", ascending=False)
+    delivery_time_by_group = products_items_orders.groupby("product_group_name")["delivery_time_gap_hrs"].mean().reset_index()
+    delivery_time_by_group = delivery_time_by_group.sort_values(by="delivery_time_gap_hrs", ascending=False)
+    product_weight_by_group = filtered_products.groupby("product_group_name")["product_weight_g"].mean().reset_index()
+    product_weight_by_group = product_weight_by_group.sort_values(by="product_weight_g", ascending=False)
+    product_volume_by_group = filtered_products.groupby("product_group_name")["product_volume_cm3"].mean().reset_index()
+    product_volume_by_group = product_volume_by_group.sort_values(by="product_volume_cm3", ascending=False)
+
+    return (products_by_category, products_by_group, products_price_by_category, products_price_by_group, shipping_price_by_group, delivery_time_by_group, product_weight_by_group, product_volume_by_group)
+
+( products_by_category,
+  products_by_group,
+  products_price_by_category, 
+  products_price_by_group, 
+  shipping_price_by_group, 
+  delivery_time_by_group, 
+  product_weight_by_group,
+  product_volume_by_group)  = compute_plotting_dfs()
+
 
 # dashboard content
 st.title("Product & Category Analysis")
