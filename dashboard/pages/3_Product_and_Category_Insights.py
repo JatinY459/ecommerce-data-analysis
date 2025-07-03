@@ -104,6 +104,9 @@ col1.metric("Total Product Categories", f"{filtered_products['product_category_n
 col2.metric("Number of Unique Products", f"{filtered_products['product_id'].nunique():,}")
 col3.metric("Avg Product Price", f"{filtered_order_items['price'].mean():,.2f}")
 
+mean_price   = filtered_order_items["price"].mean()
+median_price = filtered_order_items["price"].median()
+
 st.plotly_chart(
     px.histogram(
         filtered_order_items,
@@ -112,7 +115,8 @@ st.plotly_chart(
         title="Product Price Distribution",
         labels={"price": "Product Price"},
         color_discrete_sequence=px.colors.qualitative.Pastel,
-        template="plotly_white"
+        template="plotly_white",
+        marginal="box"
     ).update_layout(
         xaxis_title="Product Price",
         yaxis_title="Count",
@@ -122,6 +126,19 @@ st.plotly_chart(
         bargroupgap=0.1,
         xaxis=dict(tickformat=',.0f', ticks='outside', showline=True, linewidth=1, linecolor='black'),
         yaxis=dict(ticks='outside', showline=True, linewidth=1, linecolor='black')
+    ).add_vline(
+        x=mean_price,
+        line_color="yellow",
+        line_width=2,
+        line_dash="dash"
+    ).add_annotation(
+        x=mean_price,
+        y=20000,
+        yshift=0,
+        xshift=110,
+        text=f"<b>Mean</b> (skewed by high prices)<br>{mean_price:,.2f}",
+        showarrow=False,
+        font=dict(color="yellow", size=16)
     )
 )
 

@@ -3,7 +3,8 @@
 # import sys
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# or use this command instead of this code: $env:PYTHONPATH="."; streamlit run dashboard/app.py
+# or use this command instead of using this code:
+# $env:PYTHONPATH="."; streamlit run dashboard/app.py
 
 import streamlit as st
 import pandas as pd
