@@ -141,6 +141,16 @@ st.plotly_chart(
         font=dict(color="yellow", size=16)
     )
 )
+with st.expander("Product Price Distribution Summary"):
+    st.markdown("""
+- The Average Price of products is higher than the median price, this is due to the low in number but high prices skewing the mean.
+- We get that most items are priced lower than 500, while still product volume is significant for items priced at upto 1.5k.
+- Very small number of products are priced at over 2k, and only 22 over 4k.
+""")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Median Price of Products", median_price)
+    col2.metric("Products % with Price < 2k", f"{len(filtered_order_items[filtered_order_items["price"] < 2000])/len(filtered_order_items) * 100:,.2f}")
+    col3.metric("No. of Products with Price > 2k", len(filtered_order_items[filtered_order_items["price"] > 2000]))
 
 col1, col2 = st.columns(2)
 
@@ -171,7 +181,9 @@ fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate
 col2.plotly_chart(fig)
 
 with st.expander("Products Categories Top 5 vs Others Summary"):
-    st.markdown("""Write the summaries & Metrics/KPIs here""")
+    st.markdown("""- Toys category dominates the unique products list, thus most unique products are toys.
+                - The top 5 categories contribute to ~84 % of the products, suggesting that some categories have many products, while some have very few.
+                - Also, the toys product category also skews the rest of the data due to its high numbers.""")
     col1, col2, col3 = st.columns(3)
     col1.metric("Mean no. of Products [Including Toys]", f"{products_by_category['products_count'].mean():.2f}")
     col2.metric("Mean no. of Products [Excluding Toys]", f"{products_by_category[products_by_category['product_category_name'] !='toys']['products_count'].mean():.2f}")
@@ -226,11 +238,11 @@ elif category_view == "Bottom N":
         fig = px.bar(
             orders_by_products.iloc[-n:-1],
             x="product_category_name",
-            y="order_count",
+            y="order_counts",
             color="product_category_name",
             title=f"Products Order Count by Categories (Bottom {n})",
-            text='order_count',
-            labels={'product_category_name': 'Category', 'order_count': 'Number of Orders'},
+            text='order_counts',
+            labels={'product_category_name': 'Category', 'order_counts': 'Number of Orders'},
             template="plotly_white"
         )
     elif selected_quantity == "Unique Products":
@@ -250,9 +262,18 @@ st.plotly_chart(fig)
 if selected_quantity == "Order Volume":
     with st.expander("Category Order Volume Summary"):
         st.markdown("Show Number of Orders for Toys & compare toys % to others")
+        st.markdown("""- Most fashion categories don't perform well, with as few as 1-10 orders. Indicating lack of trust or customer attraction, promotions & trust building is required.
+                    - Specific & Particular product categories have less orders, due to their scarcity & lack of variety in products.
+                    """)
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Orders % for Toys Category", f"{orders_by_products[orders_by_products['product_category_name'] =='toys'].iloc[0]["order_counts"]/len(filtered_orders)*100:.2f}%")
+        col2.metric("No. of Categories with < 100 Orders", f"{orders_by_products[orders_by_products['order_counts'] < 100]["product_category_name"].count()} ({orders_by_products[orders_by_products['order_counts'] < 100]["product_category_name"].count()/orders_by_products["product_category_name"].count()*100:.1f}%)")
+        col3.metric("No. of Categories with < 100 Orders", f"{orders_by_products[orders_by_products['order_counts'] > 500]["product_category_name"].count()} ({orders_by_products[orders_by_products['order_counts'] > 500]["product_category_name"].count()/orders_by_products["product_category_name"].count()*100:.1f}%)")
+
 elif selected_quantity == "Unique Products":
     with st.expander("Top Product Categories Distribution Summary"):
-        st.markdown("""Write the summaries & Metrics/KPIs here""")
+        st.markdown("""- Many categories have very few products like fashion-categories, which may be combined to make a single grouped category 'fashion'.
+                    - Very Specific & Particular categories like christmas, la cuisine etc are generally on the lower side in product volume, but exceptions exist.""")
         col1, col2, col3, col4, col5 = st.columns([1, 3, 3, 3, 1])
         col2.metric("Mean number of Products (filtered view)", f"{products_by_category.iloc[1:n+1]["products_count"].mean() if category_view=="Top N" else products_by_category.iloc[-n:-1]["products_count"].mean():.2f}")
         col3.metric("Categories with < 10 Products", len(products_by_category[products_by_category['products_count'] < 10]))
