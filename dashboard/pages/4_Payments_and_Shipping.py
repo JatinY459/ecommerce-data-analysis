@@ -27,6 +27,11 @@ selected_regions = st.sidebar.multiselect(
     options=list(region_states_dict.keys()),
     default=list(region_states_dict.keys())
 )
+selected_payment_types = st.sidebar.multiselect(
+    "Select Payment Modes:",
+    options=payments["payment_type"].value_counts().index.tolist(),
+    default=payments["payment_type"].value_counts().index.tolist()
+)
 selected_states = [state for region in selected_regions for state in region_states_dict[region]]
 
 # TODO: see if these filters are needed or not
@@ -37,9 +42,16 @@ filtered_orders = filtered_orders[filtered_orders["order_status"].isin(selected_
 filtered_customers = customers[customers["customer_id"].isin(filtered_orders["customer_id"])]
 filtered_customers = filtered_customers[filtered_customers["customer_state"].isin(selected_states)]
 
-filtered_order_items = order_items[order_items["order_id"].isin(filtered_orders["order_id"])]
+filtered_payments = payments[
+    (payments["order_id"].isin(filtered_orders["order_id"])) &
+    (payments["payment_type"].isin(selected_payment_types))
+]
+
+valid_order_ids = filtered_payments["order_id"].unique()
+
+filtered_orders      = filtered_orders[filtered_orders["order_id"].isin(valid_order_ids)] 
+filtered_order_items = order_items[order_items["order_id"].isin(valid_order_ids)]         
 filtered_products = products[products["product_id"].isin(filtered_order_items["product_id"])]
-filtered_payments = payments[payments["order_id"].isin(filtered_orders["order_id"])]
 
 # mapping tool for customer by region
 state_to_region = {
