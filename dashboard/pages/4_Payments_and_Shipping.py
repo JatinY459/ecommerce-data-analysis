@@ -148,7 +148,11 @@ fig.update_traces(textposition='inside', textinfo='percent+label', hovertemplate
 col2.plotly_chart(fig)
 
 with st.expander("Payments Distribution by Type/Mode Summary"):
-    st.markdown("""Write the summaries & Metrics/KPIs here""")
+    st.markdown("""
+- Credit Cards dominate with ~74% of all transactions, showing trust in and access to credit-based purchases, possibly aided by installment support.
+- Digital Wallets show strong adoption at ~19.3%, indicating a growing preference for quick, convenient, and tech-driven payments.
+- Vouchers & Debit Cards are underutilized, together forming just 7%, highlighting potential for better promotion of pre-paid and debit-based options.
+""")
     
 st.divider()
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Installment Count Distribution in Credit Card Payments</h2>
@@ -181,7 +185,14 @@ if selected_quantity == "Number of Payments":
     fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
     st.plotly_chart(fig)
     with st.expander("Payments Volume by Installment Count Summary"):
-        st.markdown("Kpis: certain number of installments have hikes user friendly numbers, we dont offer installments over 24 months, over 12 installments rarely used.")
+        st.markdown("""
+- The Installment Count distribution shows a preference for favorable number of installments such as 2, 3, 6, 8, 12, 15, 18, and 24.
+- The most common installment count (other than 1) is less than 12, suggesting that customers prefer lesser number of installments for their orders.
+- The odd installment counts like 7, 9, 17 etc are rarely used, indicating that customers prefer even installment counts, and psychological behavior influences this decision.""")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Most Common Installment Count", f"{no_of_installments['payment_installments'].mode()[0]}")
+        col2.metric("Order Volume for > 12 Installments", f"{no_of_installments[no_of_installments['payment_installments'] > 12]['payments_count'].sum()}")
+        col3.metric("Order Volume for Favorable Installment Counts", f"{no_of_installments[no_of_installments['payment_installments'].isin([3,6,8,10,12,15,18, 24])]['payments_count'].sum()} ({no_of_installments[no_of_installments['payment_installments'].isin([3,6,8,10,12,15,18, 24])]['payments_count'].sum() / no_of_installments['payments_count'].sum():.1%})")
 elif selected_quantity == "Payment Value":
     fig = px.bar(
         payment_val_by_inst_count[payment_val_by_inst_count["payment_installments"].between(n[0], n[1])],
@@ -198,10 +209,12 @@ elif selected_quantity == "Payment Value":
     fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
     st.plotly_chart(fig)
     with st.expander("Payment Value by Installments Count Summary"):
-        st.markdown("""Kpis: certain number of installments have hikes user friendly numbers, don't offer installemtns over 24 months.
-                    -  peaks are skewed as there are only 1 order for each 22 & 23 installment count, implying, these peaks are skewed.
-                    -  in the first 12 installments, avg paymetn value is similar but increase slightly, as they are preferred, in general.
-                    - The 24 installment count has high payment value with significant number of orders suggesting, it is preferred for high payment value.""")
+        st.markdown("""
+        - Certain number of installments have hikes user friendly numbers, don't offer installments over 24 months.
+        - Peaks are skewed as there are only 1 order for each 22 & 23 installment count, implying, these peaks are skewed.
+        - In the first 12 installments, avg payment value is similar but increase slightly, as they are preferred, in general.
+        - The 24 installment count has high payment value with significant number of orders suggesting, it is preferred for high payment value.
+        """)
 
 st.divider()
 
@@ -268,6 +281,15 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 col2.plotly_chart(fig)
 
+with st.expander("Payment Value Distribution Summary"):
+    st.markdown("""- All the payment modes have a similar distribution, with Credit Cards having the highest payment value, followed by Digital Wallets, Vouchers, and Debit Cards.
+- The box plot shows that Credit Cards have a wider range of payment values, with most outliers on the higher end, indicating that customers are willing to spend more when using credit cards.
+- While this behavior is not the same in the debit cards & vouchers.
+    """)
+    col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+    col2.metric("Median Payment Value", f"{filtered_payments['payment_value'].median():,.2f}")
+    col3.metric("75% of Payment Value Falls Below", f"{filtered_payments['payment_value'].quantile(0.75):,.2f}")
+
 st.divider()
 col1, col2 = st.columns([1, 6])
 col1.markdown("""<p style='margin-top:4rem; font-size:1.2rem; font-weight:bold;'>Options:</p>""", unsafe_allow_html=True)
@@ -298,7 +320,12 @@ if selected_quantity == "Shipping Charges":
     fig.update_traces(marker_line_width=1, marker_line_color="white")
     col2.plotly_chart(fig)
     with st.expander("Shipping Charges Distribution Summary"):
-        st.markdown("KPIs: mean, quartiles, threshold")
+        st.markdown("""- Most of the shipping charges fall below 70, suggesting a majority of orders have low shipping costs, likely due to efficient logistics and regional proximity, but this from previous analysis, is due to the high volume of orders with better logistics."
+- The distribution shows a long tail, indicating that while most orders have low shipping costs, there are some with significantly higher charges, possibly due to longer distances or heavier items.""")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Median Shipping Charges", f"{payments_order_items['shipping_charges'].median():,.2f}")
+        col2.metric("90% of Shipping Charges Falls Below", f"{payments_order_items['shipping_charges'].quantile(0.9):,.2f}")
+        col3.metric("Threshold for High Shipping Charges", f"{payments_order_items['shipping_charges'].quantile(0.95):,.2f}")
 elif selected_quantity == "Shipping-to-Price Ratio": 
     fig = px.histogram(
         payments_order_items,
@@ -319,9 +346,12 @@ elif selected_quantity == "Shipping-to-Price Ratio":
     fig.update_traces(marker_line_width=1, marker_line_color="white")
     col2.plotly_chart(fig)
     with st.expander("Shipping-Price Ratio Distribution Summary"):
-        st.markdown("KPIs: mean, quartiles, threshold")
-
-
+        st.markdown("""
+- The Shipping-to-Price Ratio distribution shows that most orders have a ratio below 0.5, indicating that shipping costs are generally low relative to the order value, with room for improvement.
+- There exists a long tail in the distribution, suggesting that while most orders have a low shipping-to-price ratio, there are some with significantly higher ratios, possibly due to high-value items or longer shipping distances.""")
+        col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+        col2.metric("75% of Shipping-Price Ratio Falls Below", f"{payments_order_items['shipping_price_ratio'].quantile(0.75):.2f}")
+        col3.metric("Order Volume for Shipping-Price Ratio > 0.5", f"{payments_order_items[payments_order_items['shipping_price_ratio'] > 0.5]['order_id'].nunique():,} ({payments_order_items[payments_order_items['shipping_price_ratio'] > 0.5]['order_id'].nunique() / payments_order_items['order_id'].nunique():.1%})")
 st.divider()
 col1, col2 = st.columns([1, 6])
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Monthly Trends in Payments & Shipping</h2>""", unsafe_allow_html=True)
@@ -382,9 +412,12 @@ if selected_quantity == "Payments":
 
     col2.plotly_chart(fig)
     with st.expander("Total Payment Value Monthly Trends Summary"):
-        st.markdown("""Black Friday Order Volume Increase but revenue not much -> more orders for cheaper items, Increase % Kpi
-                    - Increase at the end imply, rainy season ends & platform performance & usage increase""")
-elif selected_quantity == "Shipping Charges": 
+        st.markdown("""
+- Payment value spikes in Nov 2017, aligning with Black Friday and holiday season.
+- Early 2018 sees sustained high activity, likely due to Carnival and dry season logistics.
+- Rainy season shows dip, showing a correlation between weather, logistics, and user spending patterns.""")
+        
+elif selected_quantity == "Shipping Charges":
     fig = px.bar(
         shipping_price_by_month,
         x='month',
@@ -432,5 +465,8 @@ elif selected_quantity == "Shipping Charges":
     fig.update_layout(annotations=annotations)
     col2.plotly_chart(fig)
     with st.expander("Shipping Charges Monthly Trends Summary"):
-        st.markdown("Peak at New year, low in carnival likely cuz the carnival is largely celebrated in areas like Sao Paulo & Rio de janeiro & charges there are less due to less distance & better logistics,")
+        st.markdown("""
+- Surge in orders across diverse regions increases shipping distances and urgency, raising total shipping costs.
+- Carnival celebrations in logistics-optimized cities like São Paulo and Rio de Janeiro lead to shorter delivery routes and lower shipping costs.
+- Shipping prices reflect not just order volume but also geographic concentration and infrastructure efficiency during key events.""")
 
