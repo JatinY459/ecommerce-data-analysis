@@ -175,5 +175,3 @@ cython_debug/
 
 # Data files
 # Data files
-data/processed/
-data/external/
