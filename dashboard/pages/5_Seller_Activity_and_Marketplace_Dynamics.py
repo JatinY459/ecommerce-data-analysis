@@ -138,9 +138,10 @@ if selected_quantity == "Number of Orders":
     st.plotly_chart(fig)
 
     with st.expander("Top Sellers Performance by Order Volume Summary"):
-        st.markdown("""- Some top sellers (brands and commercial) do dominate & top 10 contribute to 13.6% of total orders.
-                    - Dependent but not super dependent on top sellers, as most sellers do get less than 100/200 orders.
-                    - Fix this later.""")
+        st.markdown("""- The top 20 sellers contribute 21.16% of total orders, showing moderate reliance on a small group of high performers while maintaining a broad seller base.
+- With 1,780 sellers receiving 10 or fewer orders, the platform has a long tail of low-activity sellers, signaling potential for growth or churn.
+- Only 175 sellers have more than 100 orders, indicating that consistent high-volume performance is rare and concentrated among a select few.
+""")
         col1, col2, col3 = st.columns(3)
         col1.metric(f"Top {n} Sellers Contribution in Total", f"{(orders_by_sellers.head(n)["orders_count"].sum()/orders_by_sellers["orders_count"].sum()) * 100:.2f} %")
         col2.metric("No. of Sellers with >100 orders", f"{orders_by_sellers[orders_by_sellers['orders_count'] > 100]["seller_id"].nunique()}")
@@ -163,9 +164,10 @@ elif selected_quantity == "Total Revenue":
     st.plotly_chart(fig)
 
     with st.expander("Top Sellers Performance by Revenue Summary"):
-        st.markdown("""- Some top sellers (brands and commercial) do dominate & top 10 contribute to 13.6% of total orders.
-                    - Dependent but not super dependent on top sellers, as most sellers do get less than 100/200 orders.
-                    - Fix this later.""")
+        st.markdown("""- The top 20 sellers contribute 21.65% of total revenue, aligning closely with their order volume impact and underscoring their strong average order value or pricing power.
+- All top 20 revenue-generating sellers are the same as those leading in order volume, indicating a consistent group of dominant performers.
+- With 2,872 sellers earning ≤ 1M in revenue, the majority of the seller base operates at a much smaller scale, emphasizing a sharp revenue concentration at the top.
+""")
         col1, col2, col3 = st.columns(3)
         col1.metric(f"Top {n} Sellers Contribution in Total", f"{(revenue_by_sellers.head(n)["payment_value"].sum()/revenue_by_sellers["payment_value"].sum()) * 100:.2f} %")
         col2.metric(f"No. of Sellers in both Top {n} list", len(set(orders_by_sellers.head(n)["seller_id"]) & set(revenue_by_sellers.head(n)["seller_id"])))
@@ -195,7 +197,10 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 with st.expander(f"Top {n} Sellers by Unique Products Summary"):
-    st.markdown("Some stuff bout it")
+    st.markdown("""- Specialist sellers (with fewer than 10 unique products) dominate in number, totaling 2,214, indicating a highly fragmented marketplace with niche-focused vendors.
+- Generalist sellers (offering over 50 products) are only 90 in number but contribute disproportionately to revenue, suggesting scale and assortment strongly drive sales performance.
+- A revenue ratio of 44.12 in favor of generalists highlights a power-law dynamic where a small group of large sellers capture the majority of platform revenue.
+""")
     col1, col2, col3 = st.columns(3)
     col1.metric("No. of Specialist Sellers [<10 products]", products_by_sellers[products_by_sellers["products_count"] < 10]["seller_id"].nunique())
     col2.metric("No. of Generalist Sellers [>50 products]", products_by_sellers[products_by_sellers["products_count"] > 50]["seller_id"].nunique())
@@ -226,7 +231,11 @@ fig.update_traces(textposition='outside')
 fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
 st.plotly_chart(fig)
 with st.expander(f"Top {n} Products by Unique Sellers Summary"):
-    st.markdown("Some stuff bout it")
+    st.markdown("""
+- Only 3.47% of products are sold by more than one seller, showing low product overlap and a catalog dominated by exclusive listings.
+- Just 33 products are sold by more than three sellers, indicating minimal direct competition on individual SKUs.
+- Despite their small share, multi-seller products account for 11.70% of total orders, suggesting they are in high demand and attract buyer preference.
+""")
     col1, col2, col3 = st.columns(3)
     col1.metric("No. of Products sold by > 1 sellers", f"{len(sellers_by_products[sellers_by_products["sellers_count"] > 1])} ({len(sellers_by_products[sellers_by_products["sellers_count"] > 1])/len(sellers_by_products)*100:.2f} %)")
     col2.metric("Products sold by > 3 Sellers", f"{len(sellers_by_products[sellers_by_products["sellers_count"] > 3])}")
@@ -236,7 +245,12 @@ st.divider()
 st.markdown("""<h2 style='font-size:1.5rem; font-weight:700;'>Unique Sellers by Category:</h2>
             <p style="height:1.2rem;"></p>
             """, unsafe_allow_html=True)
-col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
-col2.metric("No of Sellers in 'toys' Category", f"{sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]} ({sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]/filtered_order_items["seller_id"].nunique() * 100 :.2f}%)")
+col1, col2, col3, col4, col5 = st.columns([1, 4, 4, 4, 1])
+col2.metric("No of Sellers in 'toys' Category", f"{sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]} ({sellers_by_categories[sellers_by_categories["product_category_name"] == 'toys']["sellers_count"].iloc[0]/filtered_order_items["seller_id"].nunique() * 100 :.1f}%)")
 col3.metric("Avg No of Sellers in a Category", f"{sellers_by_categories["sellers_count"].mean():.2f}")
 col4.metric("Avg No of Sellers in a category [excluding toys]", f"{sellers_by_categories[sellers_by_categories["product_category_name"] != 'toys']["sellers_count"].mean():.2f}")
+with st.expander("Sellers by Category Summary"):
+    st.markdown("""- The 'toys' category dominates the platform with 2,654 sellers, representing 92.4% of all sellers and indicating a strong niche focus.
+- The average number of sellers per category is 76.75, but this is heavily skewed by the toys category's large presence.
+- Excluding toys, the average drops to 38.85 sellers per category, highlighting a relatively thin seller distribution across other categories.
+""")
