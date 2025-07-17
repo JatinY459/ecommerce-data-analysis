@@ -49,7 +49,7 @@ The dataset contains anonymized customer orders made at a large e-commerce platf
 ```
 
 
-📊 Dashboard Pages (Streamlit)
+## 📊 Dashboard Pages (Streamlit)
 - Home: Project summary, key metrics, and navigation
 - Orders & Delivery Trends: Analyze order status, delays, regional trends, and delivery durations
 - Customer Geography & Behavior: Distribution by state/city and repeat purchase patterns
@@ -58,21 +58,21 @@ The dataset contains anonymized customer orders made at a large e-commerce platf
 - Seller Activity: Seller distribution, top performers, and product-seller networks
 
 
-🧪 Tools & Technologies Used
+## 🧪 Tools & Technologies Used
 - Python (Pandas, Numpy)
 - Visualization: Matplotlib, Seaborn, Plotly 
 - Web App (Dashboard): Streamlit
 - Data Handling: Jupyter Notebook
 - Project Management: Git + GitHub
 
-✅ How to Run the Dashboard Locally
-- Clone the Repository
+## ✅ How to Run the Dashboard Locally
+1. Clone the Repository
   -```bash git clone https://github.com/your-username/ecommerce-analysis.git cd ecommerce-analysis/dashboard```
 
-- Install Dependencies
+2. Install Dependencies
   -```bash pip install -r requirements.txt```
 
-- Launch Streamlit App
+3. Launch Streamlit App
   -```bash streamlit run Home.py```
 
 ## 📌 Notes
@@ -83,5 +83,15 @@ This is a learning project done as a deep-dive into a structured data analytics 
 
 ### Jatin Yadav
 
-Computer Science Engineering Student & aspiring data analyst <br>
+Computer Science Engineering Student & Aspiring Data Scientist <br>
 [LinkedIn](https://www.linkedin.com/in/jatinyadav459/) | [GitHub](https://github.com/JatinY459/)
+
+
+
+## 📎 License
+
+This project is licensed under the [MIT License](https://rem.mit-license.org/).
+---
+
+> 💬 Feel free to fork, explore, or contribute to the project. Feedback and ideas are always appreciated!
+
